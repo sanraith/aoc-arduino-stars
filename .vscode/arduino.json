@@ -1,0 +1,5 @@
+{
+    "sketch": "src\\star_display\\star_display.ino",
+    "board": "arduino:renesas_uno:unor4wifi",
+    "output": "build"
+}

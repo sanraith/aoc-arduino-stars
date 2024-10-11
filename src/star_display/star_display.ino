@@ -1,16 +1,20 @@
 /*****************  NEEDED TO MAKE NODEMCU WORK ***************************/
 #define FASTLED_INTERRUPT_RETRY_COUNT 0
 #define FASTLED_ESP8266_RAW_PIN_ORDER
+
 /******************  LIBRARY SECTION *************************************/
 #include <FastLED.h>
+
 /*****************  LED LAYOUT AND SETUP *********************************/
-#define NUM_LEDS 60 //+3
+#define NUM_LEDS 60
+
 /*****************  DECLARATIONS  ****************************************/
 CRGB leds[NUM_LEDS];
+
 /*****************  GLOBAL VARIABLES  ************************************/
 const int ledPin = 4; // marked as D2 on the board
-
 int idx = 1;
+
 /*****************  SETUP FUNCTIONS  ****************************************/
 void setup()
 {
@@ -18,6 +22,7 @@ void setup()
   Serial.begin(9600);
   FastLED.addLeds<WS2813, ledPin, GRB>(leds, NUM_LEDS);
 }
+
 /*****************  MAIN LOOP  ****************************************/
 void loop()
 {
