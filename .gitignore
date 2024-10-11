@@ -1,6 +1,7 @@
 # Custom
 .vscode/c_cpp_properties.json
 build
+arduino_secrets.h
 
 # Prerequisites
 *.d
