@@ -1,7 +1,9 @@
 /******************  LIBRARY SECTION *************************************/
+#include <ArduinoJson.h>
 #include <FastLED.h>
 #include "WiFiS3.h"
 #include "arduino_secrets.h"
+#include "WiFiSSLClient.h"
 
 /*****************  LED LAYOUT AND SETUP *********************************/
 #define NUM_LEDS 60
@@ -11,6 +13,7 @@
 /* Led strip setup */
 CRGB leds[NUM_LEDS];
 int idx = 1;
+bool isAnimating = false;
 
 /* Wifi */
 char ssid[] = SECRET_SSID; // from "arduino_secrets.h"
@@ -19,12 +22,91 @@ int led = LED_BUILTIN;
 int status = WL_IDLE_STATUS;
 WiFiServer server(80);
 
+/* Web Client */
+// #define LEADERBOARD_HTTPS 1
+char aocUserId[] = SECRET_AOC_USER_ID;
+char leaderboardHost[] = SECRET_LEADERBOARD_HOST;
+char leaderboardUrl[] = "/temp/board.json";
+int leaderboardPort = 5500;
+bool leaderBoardSSL = false;
+WiFiSSLClient httpsClient;
+WiFiClient httpClient;
+WiFiClient *client;
+
 /*****************  SETUP FUNCTIONS  ****************************************/
 void setup()
 {
   Serial.begin(115200);
   wifiSetup();
   ledStripSetup();
+  webClientSetup();
+}
+
+void webClientSetup()
+{
+  Serial.println("\nStarting connection to server...");
+  client = leaderBoardSSL ? &httpsClient : &httpClient;
+  int connectResult = client->connect(leaderboardHost, leaderboardPort);
+  if (connectResult)
+  {
+    Serial.println("connected to server");
+    // Make a HTTP request:
+    client->print("GET ");
+    client->print(leaderboardUrl);
+    client->println(" HTTP/1.1");
+    client->print("Host: ");
+    client->println(leaderboardHost);
+    client->println("Connection: close");
+    client->println();
+  }
+  else
+  {
+    Serial.println("Could not connect to server: " + connectResult);
+    return;
+  }
+
+  String jsonString;
+  if (client->connected())
+  {
+    // Jump after the HTTP headers
+    client->find("\r\n\r\n"); // TODO handle possible errors, check that state is 200, etc
+
+    // Filter to keep completion data only for our own user to save memory
+    JsonDocument filter;
+    JsonObject filter_member = filter["members"][aocUserId].to<JsonObject>();
+    filter_member["name"] = true;
+    filter_member["last_star_ts"] = true;
+    JsonObject filter_memberCompletionStarOnly = filter_member["completion_day_level"]["*"]["*"].to<JsonObject>();
+
+    // Deserialize json from stream
+    JsonDocument doc;
+    DeserializationError error = deserializeJson(doc, *client, DeserializationOption::Filter(filter));
+
+    if (error)
+    {
+      Serial.print("deserializeJson() returned ");
+      Serial.println(error.c_str());
+      return;
+    }
+
+    const char *userName = doc["members"][aocUserId]["name"];
+    Serial.print("Name: ");
+    Serial.println(userName);
+    for (int day = 1; day <= 25; day++)
+    {
+      String dayStr = String(day);
+      const int completionState = doc["members"][aocUserId]["completion_day_level"][dayStr].containsKey("1") +
+                                  doc["members"][aocUserId]["completion_day_level"][dayStr].containsKey("2");
+      Serial.print("Day ");
+      Serial.print(day);
+      Serial.print(" state: ");
+      Serial.println(completionState);
+    }
+  }
+
+  Serial.println();
+  Serial.println("disconnecting from server.");
+  client->stop();
 }
 
 void wifiSetup()
@@ -68,6 +150,7 @@ void wifiSetup()
 void ledStripSetup()
 {
   FastLED.addLeds<WS2813, LED_STRIP_DATA_PIN, GRB>(leds, NUM_LEDS);
+  FastLED.show();
 }
 
 /*****************  MAIN LOOP  ****************************************/
@@ -75,6 +158,7 @@ void loop()
 {
   wifiLoop();
   ledStripLoop();
+  // webClientLoop();
 }
 
 void wifiLoop()
@@ -108,8 +192,8 @@ void wifiLoop()
             client.println();
 
             // the content of the HTTP response follows the header:
-            client.print("<p style=\"font-size:7vw;\">Click <a href=\"/H\">here</a> turn the LED on<br></p>");
-            client.print("<p style=\"font-size:7vw;\">Click <a href=\"/L\">here</a> turn the LED off<br></p>");
+            client.print("<html><head></head><body><p style=\"font-size:24px;\">Click <a href=\"/H\">here</a> turn the LED on<br></p>");
+            client.print("<p style=\"font-size:24px;\">Click <a href=\"/L\">here</a> turn the LED off<br></p></body></html>");
 
             // The HTTP response ends with another blank line:
             client.println();
@@ -139,11 +223,13 @@ void wifiLoop()
         // Check to see if the client request was "GET /H" or "GET /L":
         if (currentLine.endsWith("GET /H"))
         {
-          digitalWrite(LED_BUILTIN, HIGH); // GET /H turns the LED on
+          // digitalWrite(LED_BUILTIN, HIGH); // GET /H turns the LED on
+          isAnimating = true;
         }
         if (currentLine.endsWith("GET /L"))
         {
-          digitalWrite(LED_BUILTIN, LOW); // GET /L turns the LED off
+          // digitalWrite(LED_BUILTIN, LOW); // GET /L turns the LED off
+          isAnimating = false;
         }
       }
     }
@@ -176,21 +262,32 @@ void printWifiStatus()
 
 void ledStripLoop()
 {
-  if (idx >= NUM_LEDS)
+  delay(75);
+  if (isAnimating)
   {
-    idx = 1;
-  }
-  if (leds[idx].r > 0)
-  {
-    leds[idx] = CRGB(0, 0, 0);
+    if (idx >= NUM_LEDS)
+    {
+      idx = 1;
+    }
+    if (leds[idx].r > 0)
+    {
+      leds[idx] = CRGB(0, 0, 0);
+    }
+    else
+    {
+      leds[idx] = CRGB(255, 255, 0);
+    }
+    idx = idx + 2;
   }
   else
   {
-    leds[idx] = CRGB(255, 255, 0);
+    for (int i = 0; i < NUM_LEDS; i++)
+    {
+      leds[idx] = CRGB(0, 0, 0);
+    }
+    FastLED.clear(true);
   }
-  idx = idx + 2;
 
   FastLED.setBrightness(25);
   FastLED.show();
-  delay(75);
 }

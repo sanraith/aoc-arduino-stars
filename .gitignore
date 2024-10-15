@@ -2,6 +2,7 @@
 .vscode/c_cpp_properties.json
 build
 arduino_secrets.h
+/temp
 
 # Prerequisites
 *.d
