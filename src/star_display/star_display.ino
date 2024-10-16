@@ -36,7 +36,6 @@ void setup()
   Serial.begin(115200);
   wifiSetup();
   ledStripSetup();
-  Serial.write("test");
   aocClient.setup();
 }
 
@@ -143,13 +142,7 @@ void wifiLoop()
 
         if (currentLine.endsWith("GET /update"))
         {
-          for (int i = 0; i < 10; i++)
-          {
-            digitalWrite(LED_BUILTIN, HIGH);
-            delay(25);
-            digitalWrite(LED_BUILTIN, LOW);
-            delay(75);
-          }
+          aocClient.requestUpdate();
         }
         // Check to see if the client request was "GET /H" or "GET /L":
         if (currentLine.endsWith("GET /H"))

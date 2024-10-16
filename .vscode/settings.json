@@ -1,4 +1,13 @@
 {
     "arduino.disableIntelliSenseAutoGen": true,
-    "cSpell.enabled": false
+    "cSpell.enabled": false,
+    "liveServer.settings.root": "/",
+    "liveServer.settings.showOnStatusbar": true,
+    "files.associations": {
+        "chrono": "cpp",
+        "condition_variable": "cpp",
+        "ctime": "cpp",
+        "mutex": "cpp",
+        "thread": "cpp"
+    }
 }

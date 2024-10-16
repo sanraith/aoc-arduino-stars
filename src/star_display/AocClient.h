@@ -7,9 +7,14 @@ public:
     AocClient(char sessionKey[], char leaderboardHost[], char leaderboardPath[], int leaderboardPort, char aocUserId[]);
     void setup();
     void loop();
-    void update(bool isForced);
+    void requestUpdate();
 
 private:
+    void _update();
+    unsigned long _getLastUpdateEpochFromEEPROM();
+    void _saveLastUpdateEpochFromEEPROM(unsigned long epoch);
+    void _printTime(time_t t);
+
     char *_sessionKey;
     char *_leaderboardHost;
     char *_leaderboardPath;
@@ -17,7 +22,8 @@ private:
     int _leaderboardPort;
     int _lastUpdate;
     int _completionState[25];
-    WiFiClient *_client;
+    unsigned long _lastUpdateEpoch;
+    WiFiClient *_wifiClient;
 
     WiFiUDP _ntpUDP;
     NTPClient *_ntpClient;

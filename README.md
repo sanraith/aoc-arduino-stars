@@ -11,3 +11,4 @@ Display Advent of Code stars via an arduino and some led strips.
     - ArduinoJson (7.2.0)
     - FastLED (3.7.8)
     - NTPClient (3.2.1)
+    - Time (1.6.1)
