@@ -4,6 +4,7 @@
 #include "WiFiS3.h"
 #include "arduino_secrets.h"
 #include "WiFiSSLClient.h"
+#include "AocClient.h"
 
 /*****************  LED LAYOUT AND SETUP *********************************/
 #define NUM_LEDS 60
@@ -23,15 +24,11 @@ int status = WL_IDLE_STATUS;
 WiFiServer server(80);
 
 /* Web Client */
-// #define LEADERBOARD_HTTPS 1
 char aocUserId[] = SECRET_AOC_USER_ID;
 char leaderboardHost[] = SECRET_LEADERBOARD_HOST;
 char leaderboardUrl[] = "/temp/board.json";
 int leaderboardPort = 5500;
-bool leaderBoardSSL = false;
-WiFiSSLClient httpsClient;
-WiFiClient httpClient;
-WiFiClient *client;
+AocClient aocClient("", leaderboardHost, leaderboardUrl, leaderboardPort, SECRET_AOC_USER_ID);
 
 /*****************  SETUP FUNCTIONS  ****************************************/
 void setup()
@@ -39,74 +36,8 @@ void setup()
   Serial.begin(115200);
   wifiSetup();
   ledStripSetup();
-  webClientSetup();
-}
-
-void webClientSetup()
-{
-  Serial.println("\nStarting connection to server...");
-  client = leaderBoardSSL ? &httpsClient : &httpClient;
-  int connectResult = client->connect(leaderboardHost, leaderboardPort);
-  if (connectResult)
-  {
-    Serial.println("connected to server");
-    // Make a HTTP request:
-    client->print("GET ");
-    client->print(leaderboardUrl);
-    client->println(" HTTP/1.1");
-    client->print("Host: ");
-    client->println(leaderboardHost);
-    client->println("Connection: close");
-    client->println();
-  }
-  else
-  {
-    Serial.println("Could not connect to server: " + connectResult);
-    return;
-  }
-
-  String jsonString;
-  if (client->connected())
-  {
-    // Jump after the HTTP headers
-    client->find("\r\n\r\n"); // TODO handle possible errors, check that state is 200, etc
-
-    // Filter to keep completion data only for our own user to save memory
-    JsonDocument filter;
-    JsonObject filter_member = filter["members"][aocUserId].to<JsonObject>();
-    filter_member["name"] = true;
-    filter_member["last_star_ts"] = true;
-    JsonObject filter_memberCompletionStarOnly = filter_member["completion_day_level"]["*"]["*"].to<JsonObject>();
-
-    // Deserialize json from stream
-    JsonDocument doc;
-    DeserializationError error = deserializeJson(doc, *client, DeserializationOption::Filter(filter));
-
-    if (error)
-    {
-      Serial.print("deserializeJson() returned ");
-      Serial.println(error.c_str());
-      return;
-    }
-
-    const char *userName = doc["members"][aocUserId]["name"];
-    Serial.print("Name: ");
-    Serial.println(userName);
-    for (int day = 1; day <= 25; day++)
-    {
-      String dayStr = String(day);
-      const int completionState = doc["members"][aocUserId]["completion_day_level"][dayStr].containsKey("1") +
-                                  doc["members"][aocUserId]["completion_day_level"][dayStr].containsKey("2");
-      Serial.print("Day ");
-      Serial.print(day);
-      Serial.print(" state: ");
-      Serial.println(completionState);
-    }
-  }
-
-  Serial.println();
-  Serial.println("disconnecting from server.");
-  client->stop();
+  Serial.write("test");
+  aocClient.setup();
 }
 
 void wifiSetup()
@@ -158,7 +89,7 @@ void loop()
 {
   wifiLoop();
   ledStripLoop();
-  // webClientLoop();
+  aocClient.loop();
 }
 
 void wifiLoop()
