@@ -5,12 +5,15 @@
 #include "arduino_secrets.h"
 #include "WiFiSSLClient.h"
 #include "AocClient.h"
+#include "EEPROMManager.h"
 
 /*****************  LED LAYOUT AND SETUP *********************************/
 #define NUM_LEDS 60
 #define LED_STRIP_DATA_PIN 4
 
 /*****************  GLOBAL VARIABLES  ****************************************/
+EEPROMManager memoryManager(1, 0);
+
 /* Led strip setup */
 CRGB leds[NUM_LEDS];
 int idx = 1;
@@ -26,14 +29,15 @@ WiFiServer server(80);
 /* Web Client */
 char aocUserId[] = SECRET_AOC_USER_ID;
 char leaderboardHost[] = SECRET_LEADERBOARD_HOST;
-char leaderboardUrl[] = "/temp/board.json";
-int leaderboardPort = 5500;
-AocClient aocClient("", leaderboardHost, leaderboardUrl, leaderboardPort, SECRET_AOC_USER_ID);
+char leaderboardUrl[] = SECRET_LEADERBOARD_URL;
+int leaderboardPort = SECRET_LEADERBOARD_PORT;
+AocClient aocClient(&memoryManager, SECRET_AOC_SESSION_KEY, leaderboardHost, leaderboardUrl, leaderboardPort, SECRET_AOC_USER_ID);
 
 /*****************  SETUP FUNCTIONS  ****************************************/
 void setup()
 {
   Serial.begin(115200);
+  memoryManager.setup();
   wifiSetup();
   ledStripSetup();
   aocClient.setup();

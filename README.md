@@ -8,6 +8,7 @@ Display Advent of Code stars via an arduino and some led strips.
   - Board: ARDUINO-UNO-R4-WIFI
   - Download Arduino IDE
   - Install libraries within Arduino IDE:
+    - ArduinoHttpClient (0.6.1)
     - ArduinoJson (7.2.0)
     - FastLED (3.7.8)
     - NTPClient (3.2.1)
