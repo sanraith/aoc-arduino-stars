@@ -1,24 +1,13 @@
 /******************  LIBRARY SECTION *************************************/
-#include <ArduinoJson.h>
-#include <FastLED.h>
 #include "WiFiS3.h"
 #include "arduino_secrets.h"
-#include "WiFiSSLClient.h"
 #include "AocClient.h"
 #include "EEPROMManager.h"
 #include "LocalServer.h"
-
-/*****************  LED LAYOUT AND SETUP *********************************/
-#define NUM_LEDS 60
-#define LED_STRIP_DATA_PIN 4
+#include "StarLedManager.h"
 
 /*****************  GLOBAL VARIABLES  ****************************************/
 EEPROMManager memoryManager(1, 0);
-
-/* Led strip setup */
-CRGB leds[NUM_LEDS];
-int idx = 1;
-bool isAnimating = false;
 
 /* Wifi */
 char ssid[] = SECRET_SSID; // from "arduino_secrets.h"
@@ -31,10 +20,13 @@ char aocUserId[] = SECRET_AOC_USER_ID;
 char leaderboardHost[] = SECRET_LEADERBOARD_HOST;
 char leaderboardUrl[] = SECRET_LEADERBOARD_URL;
 int leaderboardPort = SECRET_LEADERBOARD_PORT;
-AocClient aocClient(&memoryManager, SECRET_AOC_SESSION_KEY, leaderboardHost, leaderboardUrl, leaderboardPort, SECRET_AOC_USER_ID);
+AocClient aocClient(&memoryManager, SECRET_AOC_SESSION_KEY, leaderboardHost, leaderboardUrl, leaderboardPort, aocUserId);
 
 /* WebServer */
 LocalServer webServer(&aocClient);
+
+/* Star leds */
+StarLedManager starLedManager;
 
 /*****************  SETUP FUNCTIONS  ****************************************/
 void setup()
@@ -44,9 +36,17 @@ void setup()
   memoryManager.setup();
 
   wifiSetup();
-  ledStripSetup();
+  starLedManager.setup();
   aocClient.setup();
   webServer.setup();
+}
+
+/*****************  MAIN LOOP  ****************************************/
+void loop()
+{
+  starLedManager.loop();
+  aocClient.loop();
+  webServer.loop();
 }
 
 void wifiSetup()
@@ -86,20 +86,6 @@ void wifiSetup()
   printWifiStatus(); // you're connected now, so print out the status
 }
 
-void ledStripSetup()
-{
-  FastLED.addLeds<WS2813, LED_STRIP_DATA_PIN, GRB>(leds, NUM_LEDS);
-  FastLED.show();
-}
-
-/*****************  MAIN LOOP  ****************************************/
-void loop()
-{
-  ledStripLoop();
-  aocClient.loop();
-  webServer.loop();
-}
-
 void printWifiStatus()
 {
   // print the SSID of the network you're attached to:
@@ -119,36 +105,4 @@ void printWifiStatus()
   // print where to go in a browser:
   Serial.print("To see this page in action, open a browser to http://");
   Serial.println(ip);
-}
-
-void ledStripLoop()
-{
-  delay(75);
-  if (isAnimating)
-  {
-    if (idx >= NUM_LEDS)
-    {
-      idx = 1;
-    }
-    if (leds[idx].r > 0)
-    {
-      leds[idx] = CRGB(0, 0, 0);
-    }
-    else
-    {
-      leds[idx] = CRGB(255, 255, 0);
-    }
-    idx = idx + 2;
-  }
-  else
-  {
-    for (int i = 0; i < NUM_LEDS; i++)
-    {
-      leds[idx] = CRGB(0, 0, 0);
-    }
-    FastLED.clear(true);
-  }
-
-  FastLED.setBrightness(25);
-  FastLED.show();
 }

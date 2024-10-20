@@ -50,6 +50,10 @@ void AocClient::setup()
 
     EEPROM.get(_memoryMap.at(EEPROM_LAST_UPDATE_EPOCH_ID), _lastUpdateEpoch);
     EEPROM.get(_memoryMap.at(EEPROM_COMPLETION_STATE_ID), _completionState);
+    if (_lastUpdateEpoch == 0)
+    {
+        _updateRequested = true;
+    }
 
     Serial.print("Last update from EEPROM: ");
     _printTime(_lastUpdateEpoch);
@@ -193,22 +197,24 @@ void AocClient::_update()
     _wifiClient->stop();
     _httpClient->stop();
 
-    // Save completion data from json
+    // Read completion data from json
     const char *userName = doc["members"][_aocUserId]["name"];
     Serial.print("Name: ");
     Serial.println(userName);
+    bool updateHasChanges = false;
     for (int day = 0; day < 25; day++)
     {
         String dayStr = String(day + 1);
-        const uint8_t completionState = doc["members"][_aocUserId]["completion_day_level"][dayStr].containsKey("1") +
-                                        doc["members"][_aocUserId]["completion_day_level"][dayStr].containsKey("2");
-        _completionState[day] = completionState;
-        Serial.println("Completion day " + dayStr + ": " + String(completionState));
+        const uint8_t dayCompletionState = doc["members"][_aocUserId]["completion_day_level"][dayStr].containsKey("1") +
+                                           doc["members"][_aocUserId]["completion_day_level"][dayStr].containsKey("2");
+        updateHasChanges |= dayCompletionState != _completionState[day];
+        _completionState[day] = dayCompletionState;
+        Serial.println("Completion day " + dayStr + ": " + String(dayCompletionState));
     }
 
     // Save update data to EEPROM
-    Serial.println("Saving results to EEPROM...");
     _lastUpdateEpoch = _ntpClient->getEpochTime();
+    Serial.println("Saving results to EEPROM...");
     EEPROM.put(_memoryMap.at(EEPROM_LAST_UPDATE_EPOCH_ID), _lastUpdateEpoch);
     EEPROM.put(_memoryMap.at(EEPROM_COMPLETION_STATE_ID), _completionState);
     Serial.println("Save completed.");
