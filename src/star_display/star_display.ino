@@ -12,15 +12,26 @@ EEPROMManager memoryManager(1, 0);
 /* Wifi */
 char ssid[] = SECRET_SSID; // from "arduino_secrets.h"
 char pass[] = SECRET_PASS; // from "arduino_secrets.h"
-int led = LED_BUILTIN;
-int status = WL_IDLE_STATUS;
+int wifiStatus = WL_IDLE_STATUS;
 
-/* Web Client */
-char aocUserId[] = SECRET_AOC_USER_ID;
+/* AOC Web Client */
+int aocYear = 2023;
+
+#ifdef SECRET_LEADERBOARD_HOST
 char leaderboardHost[] = SECRET_LEADERBOARD_HOST;
-char leaderboardUrl[] = SECRET_LEADERBOARD_URL;
 int leaderboardPort = SECRET_LEADERBOARD_PORT;
-AocClient aocClient(&memoryManager, SECRET_AOC_SESSION_KEY, leaderboardHost, leaderboardUrl, leaderboardPort, aocUserId);
+#else
+char leaderboardHost[] = "adventofcode.com";
+int leaderboardPort = 443;
+#endif
+
+#ifdef SECRET_AOC_USER_ID
+AocClient aocClient(&memoryManager, SECRET_AOC_SESSION_KEY, aocYear,
+                    leaderboardHost, leaderboardPort, SECRET_AOC_LEADERBOARD_ID, SECRET_AOC_USER_ID);
+#else
+AocClient aocClient(&memoryManager, "", aocYear,
+                    leaderboardHost, leaderboardPort, "0", "0");
+#endif
 
 /* WebServer */
 LocalServer webServer(&aocClient);
@@ -51,8 +62,6 @@ void loop()
 
 void wifiSetup()
 {
-  pinMode(led, OUTPUT); // set the LED pin mode
-
   // check for the WiFi module:
   if (WiFi.status() == WL_NO_MODULE)
   {
@@ -68,18 +77,18 @@ void wifiSetup()
   }
 
 // Set IP from arduino_secrets.h otherwise fall back to DHCP
-#ifdef IP_ADDRESS
-  WiFi.config(IPAddress(IP_ADDRESS));
+#ifdef SECRET_ARDUINO_IP_ADDRESS
+  WiFi.config(IPAddress(SECRET_ARDUINO_IP_ADDRESS));
 #endif
 
   // attempt to connect to WiFi network:
-  while (status != WL_CONNECTED)
+  while (wifiStatus != WL_CONNECTED)
   {
     Serial.print("Attempting to connect to Network named: ");
     Serial.println(ssid); // print the network name (SSID);
 
     // Connect to WPA/WPA2 network. Change this line if using open or WEP network:
-    status = WiFi.begin(ssid, pass);
+    wifiStatus = WiFi.begin(ssid, pass);
     // wait 10 seconds for connection:
     delay(1000);
   }

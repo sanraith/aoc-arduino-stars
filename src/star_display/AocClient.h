@@ -9,7 +9,10 @@
 class AocClient
 {
 public:
-    AocClient(EEPROMManager *memoryManager, char sessionKey[], char leaderboardHost[], char leaderboardPath[], int leaderboardPort, char aocUserId[]);
+    AocClient(EEPROMManager *memoryManager,
+              const char sessionKey[], int aocYear,
+              char leaderboardHost[], int leaderboardPort, char leaderboardUserId[],
+              char aocUserId[]);
     void setup();
     void loop();
     void requestUpdate();
@@ -18,11 +21,13 @@ private:
     void _update();
     void _printTime(time_t t);
     void _retryLater();
+    int _getLatestAocDay(time_t currentTime, int aocYear);
 
-    char *_sessionKey;
-    char *_leaderboardHost;
-    char *_leaderboardPath;
-    char *_aocUserId;
+    char _sessionKey[257];
+    char _leaderboardHost[128];
+    char _leaderboardPath[128];
+    char _userId[16];
+    int _aocYear;
     int _leaderboardPort;
 
     bool _updateRequested;

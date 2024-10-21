@@ -1,7 +1,7 @@
 {
     "arduino.disableIntelliSenseAutoGen": true,
     "cSpell.enabled": false,
-    "liveServer.settings.root": "/",
+    "liveServer.settings.root": "/temp",
     "liveServer.settings.showOnStatusbar": true,
     "files.associations": {
         "chrono": "cpp",

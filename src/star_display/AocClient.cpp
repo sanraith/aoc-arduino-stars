@@ -9,7 +9,7 @@
 #include "WiFiS3.h"
 
 #define REQUEST_TIMEOUT_MILLIS 10000  /* 10 sec */
-#define RETRY_FREQUENCY_SECONDS 10    /* 10 sec */
+#define RETRY_FREQUENCY_SECONDS 60    /* 60 sec */
 #define UPDATE_FREQUENCY_SECONDS 3600 /* 1 hour */
 #define TIMEZONE_OFFSET_HOURS 2       /* UTC + 2 */
 
@@ -36,37 +36,18 @@ void MyHttpClient::markRequestSent()
     iState = eRequestSent;
 }
 
-int getLatestAocDay(time_t currentTime, int aocYear)
-{
-    int currentYear = year(currentTime);
-    int currentMonth = month(currentTime);
-    int currentDay = day(currentTime);
-    int currentHour = hour(currentTime);
-
-    // Check if AOC is completely in the past or future
-    if (aocYear < currentYear)
-    {
-        return 25; // aoc in the past
-    }
-    else if (aocYear > currentYear || currentMonth < 12)
-    {
-        return 0; // aoc in the future
-    }
-
-    // Puzzles unlock midnight UTC-5
-    if (currentHour - TIMEZONE_OFFSET_HOURS + AOC_TIMEZONE_OFFSET_HOURS < 0)
-    {
-        currentDay -= 1;
-    }
-    currentDay = max(0, min(currentDay, 25));
-
-    return currentDay;
-}
-
-AocClient::AocClient(EEPROMManager *memoryManager, char sessionKey[], char leaderboardHost[], char leaderboardPath[], int leaderboardPort, char aocUserId[])
-    : _sessionKey(sessionKey), _leaderboardHost(leaderboardHost), _leaderboardPath(leaderboardPath), _leaderboardPort(leaderboardPort), _aocUserId(aocUserId),
+AocClient::AocClient(EEPROMManager *memoryManager,
+                     const char sessionKey[], int aocYear,
+                     char leaderboardHost[], int leaderboardPort, char leaderboardUserId[],
+                     char userId[])
+    : _leaderboardPort(leaderboardPort), _aocYear(aocYear),
       _ntpClient(_ntpUDP, "pool.ntp.org", TIMEZONE_OFFSET_HOURS * 3600, UPDATE_FREQUENCY_SECONDS * 1000)
 {
+    snprintf(_userId, sizeof(_userId), "%s", userId);
+    snprintf(_sessionKey, sizeof(_sessionKey), "%s", sessionKey);
+    snprintf(_leaderboardHost, sizeof(_leaderboardHost), "%s", leaderboardHost);
+    snprintf(_leaderboardPath, sizeof(_leaderboardPath), "/%d/leaderboard/private/view/%s.json", aocYear, leaderboardUserId);
+
     _wifiClient = leaderboardPort == 443 ? new WiFiSSLClient() : new WiFiClient();
     _httpClient = new MyHttpClient(*_wifiClient, leaderboardHost, leaderboardPort);
     _lastUpdateEpoch = 0;
@@ -77,7 +58,13 @@ AocClient::AocClient(EEPROMManager *memoryManager, char sessionKey[], char leade
 
 void AocClient::setup()
 {
-    Serial.println("Setting up AocClient");
+    Serial.println(F("Setting up AocClient"));
+    Serial.print(F("Using leaderboard: "));
+    Serial.print(_leaderboardHost);
+    Serial.print(":");
+    Serial.print(_leaderboardPort);
+    Serial.println(_leaderboardPath);
+
     _ntpClient.begin();
     _ntpClient.update();
 
@@ -88,10 +75,10 @@ void AocClient::setup()
         _updateRequested = true;
     }
 
-    Serial.print("Last update from EEPROM: ");
+    Serial.print(F("Last update from EEPROM: "));
     _printTime(_lastUpdateEpoch);
 
-    Serial.print("Current time: ");
+    Serial.print(F("Current time: "));
     _printTime(_ntpClient.getEpochTime());
 }
 
@@ -103,8 +90,7 @@ void AocClient::loop()
 
     // Do not fetch leaderboard automatically if there are no new days to complete
     bool isYearComplete = true;
-    int aocYear = 2023; // TODO extract as class parameter
-    int latestAocDayOfYear = getLatestAocDay(currentEpochTime, aocYear);
+    int latestAocDayOfYear = _getLatestAocDay(currentEpochTime, _aocYear);
     for (int i = 0; i < latestAocDayOfYear; i++)
     {
         if (_completionState[i] != TWO_STARS_COMPLETED)
@@ -121,11 +107,11 @@ void AocClient::loop()
         Serial.println(_ntpClient.getFormattedTime());
         if (_updateRequested)
         {
-            Serial.println("Update requested, udating...");
+            Serial.println(F("Update requested, udating..."));
         }
         else
         {
-            Serial.println(String(UPDATE_FREQUENCY_SECONDS) + " seconds have passed since last update, updating...");
+            Serial.println(F("Data is outdated, updating..."));
         }
         _updateRequested = false;
 
@@ -154,32 +140,32 @@ void AocClient::_retryLater()
 
 void AocClient::_update()
 {
-    Serial.println("\nConnecting to server...");
+    Serial.println(F("\nConnecting to server..."));
     int connectResult = _wifiClient->connect(_leaderboardHost, _leaderboardPort);
     if (connectResult)
     {
-        Serial.println("Connected to server. Sending HTTP request...");
+        Serial.println(F("Connected to server. Sending HTTP request..."));
         // Make a HTTP request:
-        _wifiClient->print("GET ");
+        _wifiClient->print(F("GET "));
         _wifiClient->print(_leaderboardPath);
-        _wifiClient->println(" HTTP/1.1");
-        _wifiClient->print("Host: ");
+        _wifiClient->println(F(" HTTP/1.1"));
+        _wifiClient->print(F("Host: "));
         _wifiClient->println(_leaderboardHost);
-        _wifiClient->println("User-Agent: https://github.com/sanraith/aoc-arduino-stars by sanraith@users.noreply.github.com");
-        _wifiClient->print("Cookie: session=");
+        _wifiClient->println(F("User-Agent: https://github.com/sanraith/aoc-arduino-stars by sanraith@users.noreply.github.com"));
+        _wifiClient->print(F("Cookie: session="));
         _wifiClient->println(_sessionKey);
-        _wifiClient->println("Connection: close");
+        _wifiClient->println(F("Connection: close"));
         _wifiClient->println();
     }
     else
     {
-        Serial.println("Could not connect to server: " + connectResult);
+        Serial.println(F("Could not connect to server"));
         _retryLater();
         return;
     }
 
     // Wait for the response
-    Serial.println("Waiting for response...");
+    Serial.println(F("Waiting for response..."));
     unsigned long timeout = millis() + REQUEST_TIMEOUT_MILLIS;
     while (_wifiClient->connected() && !_wifiClient->available() && millis() < timeout)
     {
@@ -187,7 +173,7 @@ void AocClient::_update()
     }
     if (millis() >= timeout)
     {
-        Serial.println("Request timed out.");
+        Serial.println(F("Request timed out."));
         _retryLater();
         return;
     }
@@ -199,9 +185,9 @@ void AocClient::_update()
     int statusCode = _httpClient->responseStatusCode();
     if (statusCode != 200)
     {
-        Serial.print("Status code: ");
+        Serial.print(F("Status code: "));
         Serial.println(statusCode);
-        Serial.print("Response: ");
+        Serial.print(F("Response: "));
         Serial.println(_httpClient->responseBody());
         _retryLater();
         return;
@@ -211,7 +197,7 @@ void AocClient::_update()
     // Filter to keep completion data only for our own user to save memory
     String jsonString;
     JsonDocument filter;
-    JsonObject filter_member = filter["members"][_aocUserId].to<JsonObject>();
+    JsonObject filter_member = filter["members"][_userId].to<JsonObject>();
     filter_member["name"] = true;
     filter_member["last_star_ts"] = true;
     JsonObject filter_memberCompletionStarOnly = filter_member["completion_day_level"]["*"]["*"].to<JsonObject>();
@@ -221,36 +207,67 @@ void AocClient::_update()
     DeserializationError error = deserializeJson(doc, *_httpClient, DeserializationOption::Filter(filter));
     if (error)
     {
-        Serial.print("deserializeJson() returned ");
+        Serial.print(F("deserializeJson() returned "));
         Serial.println(error.c_str());
         _retryLater();
         return;
     }
 
     // Close the connection
-    Serial.println("disconnecting from server.");
+    Serial.println(F("disconnecting from server."));
     _wifiClient->stop();
     _httpClient->stop();
 
-    // Read completion data from json
-    const char *userName = doc["members"][_aocUserId]["name"];
-    Serial.print("Name: ");
+    // Read name for user from json to double check
+    const char *userName = doc["members"][_userId]["name"];
+    Serial.print(F("Name: "));
     Serial.println(userName);
+
+    // Read completion data from json
+    char dayStr[3];
     bool updateHasChanges = false;
     for (int day = 0; day < 25; day++)
     {
-        String dayStr = String(day + 1);
-        const uint8_t dayCompletionState = doc["members"][_aocUserId]["completion_day_level"][dayStr].containsKey("1") +
-                                           doc["members"][_aocUserId]["completion_day_level"][dayStr].containsKey("2");
+        snprintf(dayStr, sizeof(dayStr), "%d", day + 1);
+        const uint8_t dayCompletionState = doc["members"][_userId]["completion_day_level"][dayStr].containsKey("1") +
+                                           doc["members"][_userId]["completion_day_level"][dayStr].containsKey("2");
         updateHasChanges |= dayCompletionState != _completionState[day];
         _completionState[day] = dayCompletionState;
-        Serial.println("Completion day " + dayStr + ": " + String(dayCompletionState));
+        Serial.println(String("Completion day ") + dayStr + ": " + String(dayCompletionState));
     }
 
     // Save update data to EEPROM
     _lastUpdateEpoch = _ntpClient.getEpochTime();
-    Serial.println("Saving results to EEPROM...");
+    Serial.println(F("Saving results to EEPROM..."));
     EEPROM.put(_memoryMap.at(EEPROM_LAST_UPDATE_EPOCH_ID), _lastUpdateEpoch);
     EEPROM.put(_memoryMap.at(EEPROM_COMPLETION_STATE_ID), _completionState);
-    Serial.println("Save completed.");
+    Serial.println(F("Save completed."));
+}
+
+/** Return the latest available day (1 for the 1st) of Advent of Code in the given year based on the current time. */
+int AocClient::_getLatestAocDay(time_t currentTime, int aocYear)
+{
+    int currentYear = year(currentTime);
+    int currentMonth = month(currentTime);
+    int currentDay = day(currentTime);
+    int currentHour = hour(currentTime);
+
+    // Check if AOC is completely in the past or future
+    if (aocYear < currentYear)
+    {
+        return 25; // aoc in the past
+    }
+    else if (aocYear > currentYear || currentMonth < 12)
+    {
+        return 0; // aoc in the future
+    }
+
+    // Puzzles unlock midnight UTC-5
+    if (currentHour - TIMEZONE_OFFSET_HOURS + AOC_TIMEZONE_OFFSET_HOURS < 0)
+    {
+        currentDay -= 1;
+    }
+    currentDay = max(0, min(currentDay, 25));
+
+    return currentDay;
 }
