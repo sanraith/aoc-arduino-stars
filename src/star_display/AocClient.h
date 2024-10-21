@@ -30,9 +30,9 @@ private:
     unsigned long _lastUpdateEpoch;
 
     WiFiClient *_wifiClient;
-    WiFiUDP _ntpUDP;
-    NTPClient *_ntpClient;
     HttpClient *_httpClient;
+    WiFiUDP _ntpUDP;
+    NTPClient _ntpClient;
 
     std::map<int, int> _memoryMap;
 };

@@ -8,12 +8,18 @@
 #include "WiFiSSLClient.h"
 #include "WiFiS3.h"
 
-#define REQUEST_TIMEOUT_MILLIS 10000  /* 10 sec*/
+#define REQUEST_TIMEOUT_MILLIS 10000  /* 10 sec */
 #define RETRY_FREQUENCY_SECONDS 10    /* 10 sec */
 #define UPDATE_FREQUENCY_SECONDS 3600 /* 1 hour */
 #define TIMEZONE_OFFSET_HOURS 2       /* UTC + 2 */
+
+// IDs to keep track of EEPROM memory slots
 #define EEPROM_LAST_UPDATE_EPOCH_ID 0
 #define EEPROM_COMPLETION_STATE_ID 1
+
+// Misc constants
+#define TWO_STARS_COMPLETED 2
+#define AOC_TIMEZONE_OFFSET_HOURS -5
 
 // Created to use WiFiClient and HttpClient together
 class MyHttpClient : public HttpClient
@@ -30,8 +36,36 @@ void MyHttpClient::markRequestSent()
     iState = eRequestSent;
 }
 
+int getLatestAocDay(time_t currentTime, int aocYear)
+{
+    int currentYear = year(currentTime);
+    int currentMonth = month(currentTime);
+    int currentDay = day(currentTime);
+    int currentHour = hour(currentTime);
+
+    // Check if AOC is completely in the past or future
+    if (aocYear < currentYear)
+    {
+        return 25; // aoc in the past
+    }
+    else if (aocYear > currentYear || currentMonth < 12)
+    {
+        return 0; // aoc in the future
+    }
+
+    // Puzzles unlock midnight UTC-5
+    if (currentHour - TIMEZONE_OFFSET_HOURS + AOC_TIMEZONE_OFFSET_HOURS < 0)
+    {
+        currentDay -= 1;
+    }
+    currentDay = max(0, min(currentDay, 25));
+
+    return currentDay;
+}
+
 AocClient::AocClient(EEPROMManager *memoryManager, char sessionKey[], char leaderboardHost[], char leaderboardPath[], int leaderboardPort, char aocUserId[])
-    : _sessionKey(sessionKey), _leaderboardHost(leaderboardHost), _leaderboardPath(leaderboardPath), _leaderboardPort(leaderboardPort), _aocUserId(aocUserId)
+    : _sessionKey(sessionKey), _leaderboardHost(leaderboardHost), _leaderboardPath(leaderboardPath), _leaderboardPort(leaderboardPort), _aocUserId(aocUserId),
+      _ntpClient(_ntpUDP, "pool.ntp.org", TIMEZONE_OFFSET_HOURS * 3600, UPDATE_FREQUENCY_SECONDS * 1000)
 {
     _wifiClient = leaderboardPort == 443 ? new WiFiSSLClient() : new WiFiClient();
     _httpClient = new MyHttpClient(*_wifiClient, leaderboardHost, leaderboardPort);
@@ -44,9 +78,8 @@ AocClient::AocClient(EEPROMManager *memoryManager, char sessionKey[], char leade
 void AocClient::setup()
 {
     Serial.println("Setting up AocClient");
-    _ntpClient = new NTPClient(_ntpUDP, "pool.ntp.org", TIMEZONE_OFFSET_HOURS * 3600, UPDATE_FREQUENCY_SECONDS * 1000);
-    _ntpClient->begin();
-    _ntpClient->update();
+    _ntpClient.begin();
+    _ntpClient.update();
 
     EEPROM.get(_memoryMap.at(EEPROM_LAST_UPDATE_EPOCH_ID), _lastUpdateEpoch);
     EEPROM.get(_memoryMap.at(EEPROM_COMPLETION_STATE_ID), _completionState);
@@ -59,31 +92,33 @@ void AocClient::setup()
     _printTime(_lastUpdateEpoch);
 
     Serial.print("Current time: ");
-    _printTime(_ntpClient->getEpochTime());
+    _printTime(_ntpClient.getEpochTime());
 }
 
 void AocClient::loop()
 {
     // Update current time
-    _ntpClient->update();
-    unsigned long currentEpochTime = _ntpClient->getEpochTime();
+    _ntpClient.update();
+    unsigned long currentEpochTime = _ntpClient.getEpochTime();
 
-    // Do not fetch leaderboard automatically if the year is already completed
-    bool isYearCompleted = true;
-    for (int i = 0; i < 25; i++)
+    // Do not fetch leaderboard automatically if there are no new days to complete
+    bool isYearComplete = true;
+    int aocYear = 2023; // TODO extract as class parameter
+    int latestAocDayOfYear = getLatestAocDay(currentEpochTime, aocYear);
+    for (int i = 0; i < latestAocDayOfYear; i++)
     {
-        if (_completionState[i] != 2)
+        if (_completionState[i] != TWO_STARS_COMPLETED)
         {
-            isYearCompleted = false;
+            isYearComplete = false;
             break;
         }
     }
 
     // Fetch leaderboard update if requested or data is outdated
-    if (_updateRequested ||
-        (!isYearCompleted && (_lastUpdateEpoch > currentEpochTime || currentEpochTime - _lastUpdateEpoch >= UPDATE_FREQUENCY_SECONDS)))
+    int isUpdateDue = _lastUpdateEpoch > currentEpochTime || currentEpochTime - _lastUpdateEpoch >= UPDATE_FREQUENCY_SECONDS;
+    if (_updateRequested || (!isYearComplete && isUpdateDue))
     {
-        Serial.println(_ntpClient->getFormattedTime());
+        Serial.println(_ntpClient.getFormattedTime());
         if (_updateRequested)
         {
             Serial.println("Update requested, udating...");
@@ -112,7 +147,7 @@ void AocClient::_printTime(time_t t)
 
 void AocClient::_retryLater()
 {
-    _lastUpdateEpoch = _ntpClient->getEpochTime() - UPDATE_FREQUENCY_SECONDS + RETRY_FREQUENCY_SECONDS;
+    _lastUpdateEpoch = _ntpClient.getEpochTime() - UPDATE_FREQUENCY_SECONDS + RETRY_FREQUENCY_SECONDS;
     _wifiClient->stop();
     _httpClient->stop();
 }
@@ -213,7 +248,7 @@ void AocClient::_update()
     }
 
     // Save update data to EEPROM
-    _lastUpdateEpoch = _ntpClient->getEpochTime();
+    _lastUpdateEpoch = _ntpClient.getEpochTime();
     Serial.println("Saving results to EEPROM...");
     EEPROM.put(_memoryMap.at(EEPROM_LAST_UPDATE_EPOCH_ID), _lastUpdateEpoch);
     EEPROM.put(_memoryMap.at(EEPROM_COMPLETION_STATE_ID), _completionState);
