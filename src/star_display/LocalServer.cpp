@@ -57,9 +57,10 @@ void LocalServer::loop()
                         client.println();
 
                         // the content of the HTTP response follows the header:
-                        char websiteContent[4096];
+                        char websiteContent[sizeof(WEBSITE_SOURCE_TEMPLATE) + 1024];
                         snprintf(websiteContent, sizeof(websiteContent), WEBSITE_SOURCE_TEMPLATE, _aocClient->getAocYear(),
-                                 _aocClient->getUserId(), _aocClient->getLeaderboardId(), _aocClient->getSessionKey());
+                                 _aocClient->getUserId(), _aocClient->getLeaderboardId(), _aocClient->getSessionKey(),
+                                 _aocClient->getLeaderboardHost(), _aocClient->getLeaderboardPort());
 
                         // Send the formatted HTML content to the client
                         client.print(websiteContent);
@@ -103,19 +104,21 @@ void LocalServer::loop()
                     Serial.println("\nSetting user ID to '" + value + "'");
                     _aocClient->setUserId(value.c_str());
                 }
+                else if (currentLine.endsWith("GET /leaderboardHost"))
+                {
+                    String value = readGetParameter(client, currentLine);
+                    Serial.println("\nSetting leaderboard host to '" + value + "'");
+                    _aocClient->setLeaderboardHost(value.c_str());
+                }
+                else if (currentLine.endsWith("GET /leaderboardPort"))
+                {
+                    String value = readGetParameter(client, currentLine);
+                    Serial.println("\nSetting leaderboard port to '" + value + "'");
+                    _aocClient->setLeaderboardPort(value.toInt());
+                }
                 else if (currentLine.endsWith("GET /update"))
                 {
                     _aocClient->requestUpdate();
-                } // Check to see if the client request was "GET /H" or "GET /L":
-                else if (currentLine.endsWith("GET /H"))
-                {
-                    // digitalWrite(LED_BUILTIN, HIGH); // GET /H turns the LED on
-                    // isAnimating = true; // TODO
-                }
-                else if (currentLine.endsWith("GET /L"))
-                {
-                    // digitalWrite(LED_BUILTIN, LOW); // GET /L turns the LED off
-                    // isAnimating = false; // TODO
                 }
             }
         }

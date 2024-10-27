@@ -88,15 +88,20 @@ const char WEBSITE_SOURCE_TEMPLATE[] PROGMEM = R"abc123~~~(
                 <input type="text" id="sessionKey" name="sessionKey" value="%s">
                 <button type="button" onclick="sendRequest('sessionKey', document.getElementById('sessionKey').value)">Submit</button>
             </div>
+            <div class="form-group">
+                <label for="leaderboardHost">Leaderboard Host:</label>
+                <input type="text" id="leaderboardHost" name="leaderboardHost" value="%s">
+                <button type="button" onclick="sendRequest('leaderboardHost', document.getElementById('leaderboardHost').value)">Submit</button>
+            </div>
+            <div class="form-group">
+                <label for="leaderboardPort">Leaderboard Port:</label>
+                <input type="text" id="leaderboardPort" name="leaderboardPort" value="%d">
+                <button type="button" onclick="sendRequest('leaderboardPort', document.getElementById('leaderboardPort').value)">Submit</button>
+            </div>
         </form>
     </div>
 
     <p style="font-size:24px;">Click <a href="#" onclick="sendRequest('update')">here</a> to force an update<br></p>
-
-    <!--
-    <p style="font-size:24px;">Click <a href="/H">here</a> turn the LED on<br></p>
-    <p style="font-size:24px;">Click <a href="/L">here</a> turn the LED off<br></p>
-    -->
 
     <p id="successMessage">SUCCESS</p>
 </body>

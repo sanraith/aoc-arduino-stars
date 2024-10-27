@@ -7,7 +7,6 @@
 #include "StarLedManager.h"
 
 /*****************  GLOBAL VARIABLES  ****************************************/
-EEPROMManager memoryManager(1, 0);
 
 /* Wifi */
 char ssid[] = SECRET_SSID; // from "arduino_secrets.h"
@@ -15,28 +14,19 @@ char pass[] = SECRET_PASS; // from "arduino_secrets.h"
 int wifiStatus = WL_IDLE_STATUS;
 
 /* AOC Web Client */
-int aocYear = 2023;
-
+int aocYear = 2024;
 #ifdef SECRET_LEADERBOARD_HOST
-char leaderboardHost[] = SECRET_LEADERBOARD_HOST;
-int leaderboardPort = SECRET_LEADERBOARD_PORT;
+char leaderboardHost[] = SECRET_LEADERBOARD_HOST; // from "arduino_secrets.h"
+int leaderboardPort = SECRET_LEADERBOARD_PORT;    // from "arduino_secrets.h"
 #else
 char leaderboardHost[] = "adventofcode.com";
 int leaderboardPort = 443;
 #endif
 
-#ifdef SECRET_AOC_USER_ID
-AocClient aocClient(&memoryManager, SECRET_AOC_SESSION_KEY, aocYear,
-                    leaderboardHost, leaderboardPort, SECRET_AOC_LEADERBOARD_ID, SECRET_AOC_USER_ID);
-#else
-AocClient aocClient(&memoryManager, "", aocYear,
-                    leaderboardHost, leaderboardPort, "0", "0");
-#endif
-
-/* WebServer */
-LocalServer webServer(&aocClient);
-
-/* Star leds */
+/* Modules */
+EEPROMManager *memoryManager;
+AocClient *aocClient;
+LocalServer *webServer;
 StarLedManager starLedManager;
 
 /*****************  SETUP FUNCTIONS  ****************************************/
@@ -44,20 +34,29 @@ void setup()
 {
   Serial.begin(115200);
 
-  memoryManager.setup();
+  memoryManager = new EEPROMManager(/* version */ 3, /* startAddress */ 0);
+#ifdef SECRET_AOC_USER_ID // from "arduino_secrets.h"
+  aocClient = new AocClient(memoryManager, SECRET_AOC_SESSION_KEY, aocYear,
+                            leaderboardHost, leaderboardPort, SECRET_AOC_LEADERBOARD_ID, SECRET_AOC_USER_ID);
+#else
+  aocClient = new AocClient(memoryManager, "", aocYear,
+                            leaderboardHost, leaderboardPort, "0", "0");
+#endif
+  webServer = new LocalServer(aocClient);
 
+  memoryManager->setup();
   wifiSetup();
   starLedManager.setup();
-  aocClient.setup();
-  webServer.setup();
+  aocClient->setup();
+  webServer->setup();
 }
 
 /*****************  MAIN LOOP  ****************************************/
 void loop()
 {
   starLedManager.loop();
-  aocClient.loop();
-  webServer.loop();
+  aocClient->loop();
+  webServer->loop();
 }
 
 void wifiSetup()

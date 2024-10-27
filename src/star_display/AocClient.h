@@ -29,13 +29,20 @@ public:
     char *getLeaderboardId() { return _leaderboardId; };
     void setLeaderboardId(const char leaderboardId[]);
 
+    char *getLeaderboardHost() { return _leaderboardHost; };
+    void setLeaderboardHost(const char leaderboardHost[]);
+
+    int getLeaderboardPort() { return _leaderboardPort; };
+    void setLeaderboardPort(int leaderboardPort);
+
 private:
     void _update();
     void _printTime(time_t t);
     void _retryLater();
     int _getLatestAocDay(time_t currentTime, int aocYear);
+    void _updateHttpClient();
 
-    char _sessionKey[257];
+    char _sessionKey[260];
     char _leaderboardHost[128];
     char _leaderboardPath[128];
     char _leaderboardId[16];
@@ -43,9 +50,9 @@ private:
     int _aocYear;
     int _leaderboardPort;
 
-    bool _updateRequested;
-    uint8_t _completionState[25];
-    unsigned long _lastUpdateEpoch;
+    bool _updateRequested = false;
+    uint8_t _completionState[25] = {0};
+    unsigned long _lastUpdateEpoch = 0;
 
     WiFiClient *_wifiClient;
     HttpClient *_httpClient;

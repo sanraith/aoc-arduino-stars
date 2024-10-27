@@ -8,14 +8,21 @@
 #include "WiFiSSLClient.h"
 #include "WiFiS3.h"
 
+// Time constants
 #define REQUEST_TIMEOUT_MILLIS 10000  /* 10 sec */
 #define RETRY_FREQUENCY_SECONDS 60    /* 60 sec */
 #define UPDATE_FREQUENCY_SECONDS 3600 /* 1 hour */
 #define TIMEZONE_OFFSET_HOURS 2       /* UTC + 2 */
 
 // IDs to keep track of EEPROM memory slots
-#define EEPROM_LAST_UPDATE_EPOCH_ID 0
-#define EEPROM_COMPLETION_STATE_ID 1
+#define EEPROM_LAST_UPDATE_EPOCH 0
+#define EEPROM_COMPLETION_STATE 1
+#define EEPROM_AOC_YEAR 2
+#define EEPROM_USER_ID 3
+#define EEPROM_LEADERBOARD_ID 4
+#define EEPROM_SESSION_KEY 5
+#define EEPROM_LEADERBOARD_HOST 6
+#define EEPROM_LEADERBOARD_PORT 7
 
 // Misc constants
 #define TWO_STARS_COMPLETED 2
@@ -43,18 +50,25 @@ AocClient::AocClient(EEPROMManager *memoryManager,
     : _leaderboardPort(leaderboardPort), _aocYear(aocYear),
       _ntpClient(_ntpUDP, "pool.ntp.org", TIMEZONE_OFFSET_HOURS * 3600, UPDATE_FREQUENCY_SECONDS * 1000)
 {
+    // Store a copy of string parameters
     snprintf(_userId, sizeof(_userId), "%s", userId);
     snprintf(_sessionKey, sizeof(_sessionKey), "%s", sessionKey);
     snprintf(_leaderboardId, sizeof(_leaderboardId), "%s", leaderboardId);
     snprintf(_leaderboardHost, sizeof(_leaderboardHost), "%s", leaderboardHost);
     snprintf(_leaderboardPath, sizeof(_leaderboardPath), "/%d/leaderboard/private/view/%s.json", aocYear, leaderboardId);
 
-    _wifiClient = leaderboardPort == 443 ? new WiFiSSLClient() : new WiFiClient();
-    _httpClient = new MyHttpClient(*_wifiClient, leaderboardHost, leaderboardPort);
-    _lastUpdateEpoch = 0;
-    _updateRequested = false;
-    _memoryMap.insert({EEPROM_LAST_UPDATE_EPOCH_ID, memoryManager->registerSlot(sizeof(_lastUpdateEpoch))});
-    _memoryMap.insert({EEPROM_COMPLETION_STATE_ID, memoryManager->registerSlot(sizeof(_completionState))});
+    // Register memory slots and reload data from EEPROM
+    _memoryMap.insert({EEPROM_LAST_UPDATE_EPOCH, memoryManager->registerSlot(sizeof(_lastUpdateEpoch), _lastUpdateEpoch)});
+    _memoryMap.insert({EEPROM_COMPLETION_STATE, memoryManager->registerSlot(sizeof(_completionState), _completionState)});
+    _memoryMap.insert({EEPROM_AOC_YEAR, memoryManager->registerSlot(sizeof(_aocYear), _aocYear)});
+    _memoryMap.insert({EEPROM_USER_ID, memoryManager->registerSlot(sizeof(_userId), _userId)});
+    _memoryMap.insert({EEPROM_LEADERBOARD_ID, memoryManager->registerSlot(sizeof(_leaderboardId), _leaderboardId)});
+    _memoryMap.insert({EEPROM_SESSION_KEY, memoryManager->registerSlot(sizeof(_sessionKey), _sessionKey)});
+    _memoryMap.insert({EEPROM_LEADERBOARD_HOST, memoryManager->registerSlot(sizeof(_leaderboardHost), _leaderboardHost)});
+    _memoryMap.insert({EEPROM_LEADERBOARD_PORT, memoryManager->registerSlot(sizeof(_leaderboardPort), _leaderboardPort)});
+
+    // Initialize the WiFiClient and HttpClient
+    _updateHttpClient();
 }
 
 void AocClient::setup()
@@ -69,8 +83,6 @@ void AocClient::setup()
     _ntpClient.begin();
     _ntpClient.update();
 
-    EEPROM.get(_memoryMap.at(EEPROM_LAST_UPDATE_EPOCH_ID), _lastUpdateEpoch);
-    EEPROM.get(_memoryMap.at(EEPROM_COMPLETION_STATE_ID), _completionState);
     if (_lastUpdateEpoch == 0)
     {
         _updateRequested = true;
@@ -128,23 +140,41 @@ void AocClient::requestUpdate()
 void AocClient::setSessionKey(const char sessionKey[])
 {
     snprintf(_sessionKey, sizeof(_sessionKey), "%s", sessionKey);
+    EEPROM.put(_memoryMap.at(EEPROM_SESSION_KEY), _sessionKey);
 }
 
 void AocClient::setAocYear(int aocYear)
 {
     _aocYear = aocYear;
     snprintf(_leaderboardPath, sizeof(_leaderboardPath), "/%d/leaderboard/private/view/%s.json", aocYear, _leaderboardId);
+    EEPROM.put(_memoryMap.at(EEPROM_AOC_YEAR), _aocYear);
 }
 
 void AocClient::setUserId(const char userId[])
 {
     snprintf(_userId, sizeof(_userId), "%s", userId);
+    EEPROM.put(_memoryMap.at(EEPROM_USER_ID), _userId);
 }
 
 void AocClient::setLeaderboardId(const char leaderboardId[])
 {
     snprintf(_leaderboardId, sizeof(_leaderboardId), "%s", leaderboardId);
     snprintf(_leaderboardPath, sizeof(_leaderboardPath), "/%d/leaderboard/private/view/%s.json", _aocYear, leaderboardId);
+    EEPROM.put(_memoryMap.at(EEPROM_LEADERBOARD_ID), _leaderboardId);
+}
+
+void AocClient::setLeaderboardHost(const char leaderboardHost[])
+{
+    snprintf(_leaderboardHost, sizeof(_leaderboardHost), "%s", leaderboardHost);
+    EEPROM.put(_memoryMap.at(EEPROM_LEADERBOARD_HOST), _leaderboardHost);
+    _updateHttpClient();
+}
+
+void AocClient::setLeaderboardPort(int leaderboardPort)
+{
+    _leaderboardPort = leaderboardPort;
+    EEPROM.put(_memoryMap.at(EEPROM_LEADERBOARD_PORT), _leaderboardPort);
+    _updateHttpClient();
 }
 
 void AocClient::_printTime(time_t t)
@@ -262,8 +292,8 @@ void AocClient::_update()
     // Save update data to EEPROM
     _lastUpdateEpoch = _ntpClient.getEpochTime();
     Serial.println(F("Saving results to EEPROM..."));
-    EEPROM.put(_memoryMap.at(EEPROM_LAST_UPDATE_EPOCH_ID), _lastUpdateEpoch);
-    EEPROM.put(_memoryMap.at(EEPROM_COMPLETION_STATE_ID), _completionState);
+    EEPROM.put(_memoryMap.at(EEPROM_LAST_UPDATE_EPOCH), _lastUpdateEpoch);
+    EEPROM.put(_memoryMap.at(EEPROM_COMPLETION_STATE), _completionState);
     Serial.println(F("Save completed."));
 }
 
@@ -293,4 +323,12 @@ int AocClient::_getLatestAocDay(time_t currentTime, int aocYear)
     currentDay = max(0, min(currentDay, 25));
 
     return currentDay;
+}
+
+void AocClient::_updateHttpClient()
+{
+    delete _httpClient;
+    delete _wifiClient;
+    _wifiClient = _leaderboardPort == 443 ? new WiFiSSLClient() : new WiFiClient();
+    _httpClient = new MyHttpClient(*_wifiClient, _leaderboardHost, _leaderboardPort);
 }
