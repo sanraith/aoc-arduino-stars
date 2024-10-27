@@ -36,3 +36,12 @@ const char SECRET_AOC_SESSION_KEY[] PROGMEM = "YOUR_SESSION_KEY"; // Your Advent
 #define SECRET_LEADERBOARD_HOST "192.168.0.1" // Alternative IP address to get the leaderboard json from
 #define SECRET_LEADERBOARD_PORT 5500 // Alternative port to get the leaderboard json from
 ```
+
+## Advent of Code Automation
+
+This repository does follow the automation guidelines on the /r/adventofcode [community wiki](https://www.reddit.com/r/adventofcode/wiki/faqs/automation). Specifically:
+
+- Outbound calls are triggered manually or throttled to 1 per hour as defined in `AocClient.cpp`.  
+  Furthermore, if it is impossible to get a data update (e.g. all stars are collected up to the current date), no automated requests will be made.
+- All successful web request results and their timestamp are cached in EEPROM to prevent unnecessary reloads even after the arduino is reset.
+- The User-Agent header in `AocClient.cpp` is set to me since I maintain this repository.
