@@ -11,11 +11,23 @@ class AocClient
 public:
     AocClient(EEPROMManager *memoryManager,
               const char sessionKey[], int aocYear,
-              char leaderboardHost[], int leaderboardPort, char leaderboardUserId[],
+              char leaderboardHost[], int leaderboardPort, char leaderboardId[],
               char aocUserId[]);
     void setup();
     void loop();
     void requestUpdate();
+
+    char *getSessionKey() { return _sessionKey; };
+    void setSessionKey(const char sessionKey[]);
+
+    int getAocYear() { return _aocYear; };
+    void setAocYear(int aocYear);
+
+    char *getUserId() { return _userId; };
+    void setUserId(const char userId[]);
+
+    char *getLeaderboardId() { return _leaderboardId; };
+    void setLeaderboardId(const char leaderboardId[]);
 
 private:
     void _update();
@@ -26,6 +38,7 @@ private:
     char _sessionKey[257];
     char _leaderboardHost[128];
     char _leaderboardPath[128];
+    char _leaderboardId[16];
     char _userId[16];
     int _aocYear;
     int _leaderboardPort;

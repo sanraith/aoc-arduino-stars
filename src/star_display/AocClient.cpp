@@ -38,15 +38,16 @@ void MyHttpClient::markRequestSent()
 
 AocClient::AocClient(EEPROMManager *memoryManager,
                      const char sessionKey[], int aocYear,
-                     char leaderboardHost[], int leaderboardPort, char leaderboardUserId[],
+                     char leaderboardHost[], int leaderboardPort, char leaderboardId[],
                      char userId[])
     : _leaderboardPort(leaderboardPort), _aocYear(aocYear),
       _ntpClient(_ntpUDP, "pool.ntp.org", TIMEZONE_OFFSET_HOURS * 3600, UPDATE_FREQUENCY_SECONDS * 1000)
 {
     snprintf(_userId, sizeof(_userId), "%s", userId);
     snprintf(_sessionKey, sizeof(_sessionKey), "%s", sessionKey);
+    snprintf(_leaderboardId, sizeof(_leaderboardId), "%s", leaderboardId);
     snprintf(_leaderboardHost, sizeof(_leaderboardHost), "%s", leaderboardHost);
-    snprintf(_leaderboardPath, sizeof(_leaderboardPath), "/%d/leaderboard/private/view/%s.json", aocYear, leaderboardUserId);
+    snprintf(_leaderboardPath, sizeof(_leaderboardPath), "/%d/leaderboard/private/view/%s.json", aocYear, leaderboardId);
 
     _wifiClient = leaderboardPort == 443 ? new WiFiSSLClient() : new WiFiClient();
     _httpClient = new MyHttpClient(*_wifiClient, leaderboardHost, leaderboardPort);
@@ -122,6 +123,28 @@ void AocClient::loop()
 void AocClient::requestUpdate()
 {
     _updateRequested = true;
+}
+
+void AocClient::setSessionKey(const char sessionKey[])
+{
+    snprintf(_sessionKey, sizeof(_sessionKey), "%s", sessionKey);
+}
+
+void AocClient::setAocYear(int aocYear)
+{
+    _aocYear = aocYear;
+    snprintf(_leaderboardPath, sizeof(_leaderboardPath), "/%d/leaderboard/private/view/%s.json", aocYear, _leaderboardId);
+}
+
+void AocClient::setUserId(const char userId[])
+{
+    snprintf(_userId, sizeof(_userId), "%s", userId);
+}
+
+void AocClient::setLeaderboardId(const char leaderboardId[])
+{
+    snprintf(_leaderboardId, sizeof(_leaderboardId), "%s", leaderboardId);
+    snprintf(_leaderboardPath, sizeof(_leaderboardPath), "/%d/leaderboard/private/view/%s.json", _aocYear, leaderboardId);
 }
 
 void AocClient::_printTime(time_t t)

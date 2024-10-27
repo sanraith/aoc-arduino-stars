@@ -1,4 +1,5 @@
 #include "LocalServer.h"
+#include "LocalServer_res.h"
 #include "WiFiS3.h"
 #include "AocClient.h"
 
@@ -9,6 +10,21 @@ LocalServer::LocalServer(AocClient *aocClient) : _server(80), _aocClient(aocClie
 void LocalServer::setup()
 {
     _server.begin();
+}
+
+String readGetParameter(WiFiClient &client, String &currentLine)
+{
+    while (client.read() != '=')
+        ;
+
+    char c;
+    String value = "";
+    while ((c = client.read()) != '\r' && c != ' ')
+    {
+        value += c;
+    }
+    currentLine = "";
+    return value;
 }
 
 void LocalServer::loop()
@@ -41,8 +57,12 @@ void LocalServer::loop()
                         client.println();
 
                         // the content of the HTTP response follows the header:
-                        client.print("<html><head></head><body><p style=\"font-size:24px;\">Click <a href=\"/H\">here</a> turn the LED on<br></p>");
-                        client.print("<p style=\"font-size:24px;\">Click <a href=\"/L\">here</a> turn the LED off<br></p></body></html>");
+                        char websiteContent[4096];
+                        snprintf(websiteContent, sizeof(websiteContent), WEBSITE_SOURCE_TEMPLATE, _aocClient->getAocYear(),
+                                 _aocClient->getUserId(), _aocClient->getLeaderboardId(), _aocClient->getSessionKey());
+
+                        // Send the formatted HTML content to the client
+                        client.print(websiteContent);
 
                         // The HTTP response ends with another blank line:
                         client.println();
@@ -59,17 +79,40 @@ void LocalServer::loop()
                     currentLine += c; // add it to the end of the currentLine
                 }
 
-                if (currentLine.endsWith("GET /update"))
+                if (currentLine.endsWith("GET /sessionKey"))
+                {
+                    String value = readGetParameter(client, currentLine);
+                    Serial.println("\nSetting session key to '" + value + "'");
+                    _aocClient->setSessionKey(value.c_str());
+                }
+                else if (currentLine.endsWith("GET /year"))
+                {
+                    String value = readGetParameter(client, currentLine);
+                    Serial.println("\nSetting year to '" + value + "'");
+                    _aocClient->setAocYear(value.toInt());
+                }
+                else if (currentLine.endsWith("GET /leaderboardId"))
+                {
+                    String value = readGetParameter(client, currentLine);
+                    Serial.println("\nSetting leaderboard ID to '" + value + "'");
+                    _aocClient->setLeaderboardId(value.c_str());
+                }
+                else if (currentLine.endsWith("GET /userId"))
+                {
+                    String value = readGetParameter(client, currentLine);
+                    Serial.println("\nSetting user ID to '" + value + "'");
+                    _aocClient->setUserId(value.c_str());
+                }
+                else if (currentLine.endsWith("GET /update"))
                 {
                     _aocClient->requestUpdate();
-                }
-                // Check to see if the client request was "GET /H" or "GET /L":
-                if (currentLine.endsWith("GET /H"))
+                } // Check to see if the client request was "GET /H" or "GET /L":
+                else if (currentLine.endsWith("GET /H"))
                 {
                     // digitalWrite(LED_BUILTIN, HIGH); // GET /H turns the LED on
                     // isAnimating = true; // TODO
                 }
-                if (currentLine.endsWith("GET /L"))
+                else if (currentLine.endsWith("GET /L"))
                 {
                     // digitalWrite(LED_BUILTIN, LOW); // GET /L turns the LED off
                     // isAnimating = false; // TODO
