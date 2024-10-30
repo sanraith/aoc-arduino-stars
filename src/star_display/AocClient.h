@@ -40,7 +40,8 @@ private:
     void _printTime(time_t t);
     void _retryLater();
     int _getLatestAocDay(time_t currentTime, int aocYear);
-    void _updateHttpClient();
+    void _updateWebClientConfig();
+    void _updateLeaderboardPath();
 
     char _sessionKey[260];
     char _leaderboardHost[128];

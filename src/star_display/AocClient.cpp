@@ -55,7 +55,7 @@ AocClient::AocClient(EEPROMManager *memoryManager,
     snprintf(_sessionKey, sizeof(_sessionKey), "%s", sessionKey);
     snprintf(_leaderboardId, sizeof(_leaderboardId), "%s", leaderboardId);
     snprintf(_leaderboardHost, sizeof(_leaderboardHost), "%s", leaderboardHost);
-    snprintf(_leaderboardPath, sizeof(_leaderboardPath), "/%d/leaderboard/private/view/%s.json", aocYear, leaderboardId);
+    _updateLeaderboardPath();
 
     // Register memory slots and reload data from EEPROM
     _memoryMap.insert({EEPROM_LAST_UPDATE_EPOCH, memoryManager->registerSlot(sizeof(_lastUpdateEpoch), _lastUpdateEpoch)});
@@ -68,7 +68,7 @@ AocClient::AocClient(EEPROMManager *memoryManager,
     _memoryMap.insert({EEPROM_LEADERBOARD_PORT, memoryManager->registerSlot(sizeof(_leaderboardPort), _leaderboardPort)});
 
     // Initialize the WiFiClient and HttpClient
-    _updateHttpClient();
+    _updateWebClientConfig();
 }
 
 void AocClient::setup()
@@ -146,8 +146,8 @@ void AocClient::setSessionKey(const char sessionKey[])
 void AocClient::setAocYear(int aocYear)
 {
     _aocYear = aocYear;
-    snprintf(_leaderboardPath, sizeof(_leaderboardPath), "/%d/leaderboard/private/view/%s.json", aocYear, _leaderboardId);
     EEPROM.put(_memoryMap.at(EEPROM_AOC_YEAR), _aocYear);
+    _updateLeaderboardPath();
 }
 
 void AocClient::setUserId(const char userId[])
@@ -159,22 +159,22 @@ void AocClient::setUserId(const char userId[])
 void AocClient::setLeaderboardId(const char leaderboardId[])
 {
     snprintf(_leaderboardId, sizeof(_leaderboardId), "%s", leaderboardId);
-    snprintf(_leaderboardPath, sizeof(_leaderboardPath), "/%d/leaderboard/private/view/%s.json", _aocYear, leaderboardId);
     EEPROM.put(_memoryMap.at(EEPROM_LEADERBOARD_ID), _leaderboardId);
+    _updateLeaderboardPath();
 }
 
 void AocClient::setLeaderboardHost(const char leaderboardHost[])
 {
     snprintf(_leaderboardHost, sizeof(_leaderboardHost), "%s", leaderboardHost);
     EEPROM.put(_memoryMap.at(EEPROM_LEADERBOARD_HOST), _leaderboardHost);
-    _updateHttpClient();
+    _updateWebClientConfig();
 }
 
 void AocClient::setLeaderboardPort(int leaderboardPort)
 {
     _leaderboardPort = leaderboardPort;
     EEPROM.put(_memoryMap.at(EEPROM_LEADERBOARD_PORT), _leaderboardPort);
-    _updateHttpClient();
+    _updateWebClientConfig();
 }
 
 void AocClient::_printTime(time_t t)
@@ -325,10 +325,15 @@ int AocClient::_getLatestAocDay(time_t currentTime, int aocYear)
     return currentDay;
 }
 
-void AocClient::_updateHttpClient()
+void AocClient::_updateWebClientConfig()
 {
     delete _httpClient;
     delete _wifiClient;
     _wifiClient = _leaderboardPort == 443 ? new WiFiSSLClient() : new WiFiClient();
     _httpClient = new MyHttpClient(*_wifiClient, _leaderboardHost, _leaderboardPort);
+}
+
+void AocClient::_updateLeaderboardPath()
+{
+    snprintf(_leaderboardPath, sizeof(_leaderboardPath), "/%d/leaderboard/private/view/%s.json", _aocYear, _leaderboardId);
 }

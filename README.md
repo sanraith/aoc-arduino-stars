@@ -2,6 +2,10 @@
 
 Display Advent of Code stars via an arduino and some led strips.
 
+## Wiring diagram
+
+![Arduino wiring diagram](wiring_diagram.png)
+
 ## Dev environment
 
 - Arduino
