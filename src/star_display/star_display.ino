@@ -51,9 +51,9 @@ void setup()
   wifiManager->setIpAddress(SECRET_ARDUINO_IP_ADDRESS);
 #endif
 
+  starLedManager->setup();
   wifiManager->setup();
   memoryManager->setup();
-  starLedManager->setup();
   aocClient->setup();
   webServer->setup();
 }
