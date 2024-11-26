@@ -1,7 +1,7 @@
 #include "WifiManager.h"
 #include "WiFiS3.h"
 
-WifiManager::WifiManager(char ssid[], char pass[]) : _ssid(ssid), _pass(pass)
+WifiManager::WifiManager(char ssid[], char pass[], StarLedManager *starLedManager) : _ssid(ssid), _pass(pass), _starLedManager(starLedManager)
 {
 }
 
@@ -46,6 +46,7 @@ void WifiManager::setup()
     {
         Serial.println("Please upgrade the firmware");
     }
+    _starLedManager->updateProgress(0.20);
 
     // attempt to connect to WiFi network:
     while (wifiStatus != WL_CONNECTED)
@@ -58,5 +59,7 @@ void WifiManager::setup()
         // wait 10 seconds for connection:
         delay(1000);
     }
+    _starLedManager->updateProgress(0.40);
+
     printWifiStatus(); // you're connected now, so print out the status
 }

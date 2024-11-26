@@ -3,13 +3,15 @@
 #include "WiFiS3.h"
 #include "AocClient.h"
 
-LocalServer::LocalServer(AocClient *aocClient) : _server(80), _aocClient(aocClient)
+LocalServer::LocalServer(AocClient *aocClient, StarLedManager *starLedManager)
+    : _server(80), _aocClient(aocClient), _starLedManager(starLedManager)
 {
 }
 
 void LocalServer::setup()
 {
     _server.begin();
+    _starLedManager->updateProgress(0.80);
 }
 
 String readGetParameter(WiFiClient &client, String &currentLine)

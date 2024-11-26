@@ -35,17 +35,18 @@ void setup()
   Serial.begin(115200);
 
   starLedManager = new StarLedManager();
-  wifiManager = new WifiManager(ssid, pass);
+  wifiManager = new WifiManager(ssid, pass, starLedManager);
   memoryManager = new EEPROMManager(/* version */ 3, /* startAddress */ 0);
 #ifdef SECRET_AOC_USER_ID // from "arduino_secrets.h"
   aocClient = new AocClient(memoryManager, SECRET_AOC_SESSION_KEY, aocYear,
-                            leaderboardHost, leaderboardPort, SECRET_AOC_LEADERBOARD_ID, SECRET_AOC_USER_ID);
+                            leaderboardHost, leaderboardPort, SECRET_AOC_LEADERBOARD_ID, SECRET_AOC_USER_ID, starLedManager);
 #else
   aocClient = new AocClient(memoryManager, "", aocYear,
-                            leaderboardHost, leaderboardPort, "0", "0");
+                            leaderboardHost, leaderboardPort, "0", "0", starLedManager);
 #endif
-  webServer = new LocalServer(aocClient);
+  webServer = new LocalServer(aocClient, starLedManager);
   starLedManager->setup();
+  starLedManager->updateProgress(0.10);
 
 // Set IP from arduino_secrets.h otherwise fall back to DHCP
 #ifdef SECRET_ARDUINO_IP_ADDRESS // from "arduino_secrets.h"

@@ -8,7 +8,7 @@
 #define LED_STRIP_DATA_PIN 4
 #define GRID_WIDTH 11
 #define GRID_HEIGHT 8
-#define NUM_DAYS 25 // Constant for the number of days
+#define NUM_DAYS 25
 
 enum StarDisplayState
 {

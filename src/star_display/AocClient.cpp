@@ -46,9 +46,10 @@ void MyHttpClient::markRequestSent()
 AocClient::AocClient(EEPROMManager *memoryManager,
                      const char sessionKey[], int aocYear,
                      char leaderboardHost[], int leaderboardPort, char leaderboardId[],
-                     char userId[])
+                     char userId[], StarLedManager *starLedManager)
     : _leaderboardPort(leaderboardPort), _aocYear(aocYear),
-      _ntpClient(_ntpUDP, "pool.ntp.org", TIMEZONE_OFFSET_HOURS * 3600, UPDATE_FREQUENCY_SECONDS * 1000)
+      _ntpClient(_ntpUDP, "pool.ntp.org", TIMEZONE_OFFSET_HOURS * 3600, UPDATE_FREQUENCY_SECONDS * 1000),
+      _starLedManager(starLedManager)
 {
     // Store a copy of string parameters
     snprintf(_userId, sizeof(_userId), "%s", userId);
@@ -93,6 +94,7 @@ void AocClient::setup()
 
     Serial.print(F("Current time: "));
     _printTime(_ntpClient.getEpochTime());
+    _starLedManager->updateProgress(0.60);
 }
 
 void AocClient::loop()
@@ -130,6 +132,8 @@ void AocClient::loop()
 
         _update();
     }
+
+    _starLedManager->updateProgress(1.00);
 }
 
 void AocClient::requestUpdate()
@@ -295,6 +299,9 @@ void AocClient::_update()
     EEPROM.put(_memoryMap.at(EEPROM_LAST_UPDATE_EPOCH), _lastUpdateEpoch);
     EEPROM.put(_memoryMap.at(EEPROM_COMPLETION_STATE), _completionState);
     Serial.println(F("Save completed."));
+
+    _starLedManager->updateProgress(0.75); // Update progress to 75%
+    _starLedManager->updateProgress(1.0);  // Update progress to 100%
 }
 
 /** Return the latest available day (1 for the 1st) of Advent of Code in the given year based on the current time. */

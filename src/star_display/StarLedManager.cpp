@@ -10,13 +10,13 @@ StarLedManager::StarLedManager() : _idx(0), _isAnimating(false), _currentState(S
     }
 
     // Initialize the 2D grid with -1 (indicating no LED)
-    _ledGrid.resize(GRID_HEIGHT); // Outer vector resized to GRID_HEIGHT
+    _ledGrid.resize(GRID_HEIGHT);
     for (int i = 0; i < GRID_HEIGHT; i++)
     {
-        _ledGrid[i].resize(GRID_WIDTH, -1); // Each inner vector resized to GRID_WIDTH with default value -1
+        _ledGrid[i].resize(GRID_WIDTH, -1);
     }
 
-    // Randomly assign LEDs to the grid (20% filled)
+    // Randomly assign LEDs to the grid for now
     for (int i = 0; i < NUM_DAYS; i++)
     {
         int x = random(GRID_WIDTH);
@@ -44,6 +44,7 @@ void StarLedManager::loop()
         handleIdleState();
         break;
     }
+    delay(100);
 }
 
 void StarLedManager::updateProgress(float percentage)
@@ -53,6 +54,8 @@ void StarLedManager::updateProgress(float percentage)
         return;
     }
     _progress = percentage;
+
+    Serial.println(_progress);
     handleLoadingState();
     if (_progress >= 1)
     {
@@ -89,9 +92,9 @@ void StarLedManager::handleLoadingState()
     int numLedsToLight = static_cast<int>(_progress * NUM_DAYS);
     for (int i = 0; i < numLedsToLight; i++)
     {
-        _leds[_dayToLedMap[i]] = CRGB(0, 255, 0); // Faint green color
+        _leds[_dayToLedMap[i]] = CRGB(0, 255, 0); // Green color
     }
-    FastLED.setBrightness(50); // Set brightness to faint
+    FastLED.setBrightness(25); // Set brightness to faint
     FastLED.show();
 }
 
@@ -99,6 +102,6 @@ void StarLedManager::handleIdleState()
 {
     // Implement the behavior for the idle state
     // For now, just clear the LEDs
-    FastLED.clear(true);
+    // FastLED.clear(true);
     FastLED.show();
 }

@@ -5,6 +5,7 @@
 #include "WiFiS3.h"
 #include "EEPROMManager.h"
 #include <map>
+#include "StarLedManager.h"
 
 class AocClient
 {
@@ -12,7 +13,7 @@ public:
     AocClient(EEPROMManager *memoryManager,
               const char sessionKey[], int aocYear,
               char leaderboardHost[], int leaderboardPort, char leaderboardId[],
-              char aocUserId[]);
+              char aocUserId[], StarLedManager *starLedManager);
     void setup();
     void loop();
     void requestUpdate();
@@ -59,6 +60,7 @@ private:
     HttpClient *_httpClient;
     WiFiUDP _ntpUDP;
     NTPClient _ntpClient;
+    StarLedManager *_starLedManager;
 
     std::map<int, int> _memoryMap;
 };
