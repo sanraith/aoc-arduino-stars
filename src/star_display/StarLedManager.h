@@ -35,6 +35,8 @@ private:
     float _progress;                        // Field to store the progress value
     uint8_t _completionState[NUM_DAYS] = {0};
 
+    uint16_t _ledAnimationState[NUM_DAYS] = {0};
+
     void handleLoadingState();
     void handleIdleState();
 };
