@@ -3,6 +3,7 @@
 #include <FastLED.h>
 #include <map>
 #include <vector>
+#include <set>
 
 #define NUM_LEDS 43
 #define LED_STRIP_DATA_PIN 4
@@ -39,4 +40,13 @@ private:
 
     void handleLoadingState();
     void handleIdleState();
+
+    std::vector<std::set<int>> _columns = {
+        {33, 34, 41, 42},
+        {0, 19, 20, 31, 36, 39},
+        {2, 17, 22, 29, 38},
+        {4, 15, 24, 27},
+        {6, 13, 26},
+        {8, 11},
+        {10}};
 };

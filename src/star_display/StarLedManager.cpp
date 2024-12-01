@@ -1,12 +1,21 @@
 #include "StarLedManager.h"
 #include <FastLED.h>
 #include <cmath>
+#include <set>
 
-const CHSV COLOR_GOLD = CHSV(64, 255, 255);
+const CRGB COLOR_GOLD = CRGB(255, 255, 0); // CHSV(64, 255, 255);
 const CHSV COLOR_SILVER = CHSV(64, 0, 200);
 
 StarLedManager::StarLedManager() : _idx(0), _currentState(STAR_LOADING), _progress(0.0f)
 {
+    //       42
+    //     41 39
+    //    34 36 38
+    //   33 31 29 27
+    //   20 22 24 26
+    //  19 17 15 13 11
+    // 0  2  4  6  8  10
+
     // Row 1
     _dayToLedMap[0] = 0;
     _dayToLedMap[1] = 2;
@@ -148,7 +157,7 @@ void StarLedManager::handleLoadingState()
     FastLED.show();
 }
 
-CHSV getColor(uint16_t stateIn)
+CHSV getColorForAnimationState(uint16_t stateIn)
 {
     uint8_t state = stateIn >> 8;
     CHSV color = CHSV(state, 255, 255);
@@ -160,7 +169,7 @@ void StarLedManager::handleIdleState()
     FastLED.clear(true);
     for (int i = 0; i < NUM_DAYS; i++)
     {
-        CHSV ledColor;
+        CRGB ledColor;
         if (_completionState[i] == 2)
         {
             ledColor = COLOR_GOLD;
@@ -171,10 +180,72 @@ void StarLedManager::handleIdleState()
         }
         else
         {
-            ledColor = getColor(_ledAnimationState[i]);
+            // Color by 45° columns
+            int ledId = _dayToLedMap[i];
+            int columnIdx;
+            for (columnIdx = 0; columnIdx < _columns.size(); columnIdx++)
+            {
+                std::set<int> mySet = _columns.at(columnIdx);
+                if (mySet.find(ledId) != mySet.end())
+                {
+                    break;
+                }
+            }
+            int colorIdx = columnIdx % 3;
+            switch (colorIdx)
+            {
+            case 0:
+                ledColor = CRGB::OrangeRed;
+                break;
+            case 2:
+                ledColor = CRGB::RoyalBlue;
+                break;
+            case 1:
+                ledColor = CRGB::ForestGreen;
+                break;
+            }
+            if (i != 24)
+            {
+                ledColor.fadeToBlackBy(160);
+            }
+
+            // Color equally by dark colors
+            // int colorIdx = _dayToLedMap[i] % 3;
+            // switch (colorIdx)
+            // {
+            // case 0:
+            //     ledColor = CRGB::DarkOrange;
+            //     break;
+            // case 1:
+            //     ledColor = CRGB::BlueViolet;
+            //     break;
+            // case 2:
+            //     ledColor = CRGB::DarkCyan;
+            //     break;
+            // }
+            // ledColor.fadeToBlackBy(128);
+
+            // Color each row with red/blue
+            // int colorIdx = _dayToLedMap[i] % 2;
+            // switch (colorIdx)
+            // {
+            // case 0:
+            //     ledColor = CRGB::DarkRed;
+            //     break;
+            // case 1:
+            //     ledColor = CRGB::DarkBlue;
+            //     break;
+            //     // case 2:
+            //     //     ledColor = CRGB::DarkCyan;
+            //     //     break;
+            // }
+            // ledColor.fadeToBlackBy(64);
+
+            // ledColor = getColor(_ledAnimationState[i]);
         }
+
         _leds[_dayToLedMap[i]] = ledColor;
-        _ledAnimationState[i] = (_ledAnimationState[i] + 100) % 65536;
+        // _ledAnimationState[i] = (_ledAnimationState[i] + 100) % 65536;
     }
     FastLED.setBrightness(25);
     FastLED.show();
