@@ -2,8 +2,8 @@
 #include <FastLED.h>
 #include <cmath>
 
-const CRGB COLOR_GOLD = CRGB(255, 255, 0);
-const CRGB COLOR_SILVER = CRGB(200, 200, 200);
+const CHSV COLOR_GOLD = CHSV(64, 255, 255);
+const CHSV COLOR_SILVER = CHSV(64, 0, 200);
 
 StarLedManager::StarLedManager() : _idx(0), _currentState(STAR_LOADING), _progress(0.0f)
 {
@@ -53,7 +53,7 @@ StarLedManager::StarLedManager() : _idx(0), _currentState(STAR_LOADING), _progre
         _ledGrid[i].resize(GRID_WIDTH, -1);
     }
 
-    int colorTypes = 5;
+    int colorTypes = 4;
     int maxState = 65535;
     int maxDelta = maxState / 25;
     // Randomly assign LEDs to the grid for now
@@ -148,24 +148,11 @@ void StarLedManager::handleLoadingState()
     FastLED.show();
 }
 
-CRGB getColor(uint16_t stateIn)
+CHSV getColor(uint16_t stateIn)
 {
-    uint8_t state = (stateIn / 256) % 255; // stateIn >> 8;
-    uint8_t phase = state / 85;
-    uint8_t intensity1 = (state % 85) * 3; // 0-255 range
-    uint8_t intensity = /*cubicwave8(cubicwave8(*/ cubicwave8(intensity1 / 2) /*/ 2) / 2)*/;
-
-    switch (phase)
-    {
-    case 0:
-        return CRGB(255 - intensity, 0, intensity); // Red -> Blue
-    case 1:
-        return CRGB(0, intensity, 255 - intensity); // Blue -> Green
-    case 2:
-        return CRGB(intensity, 255 - intensity, 0); // Green -> Red
-    default:
-        return CRGB(0, 0, 0); // Should never reach here
-    }
+    uint8_t state = stateIn >> 8;
+    CHSV color = CHSV(state, 255, 255);
+    return color;
 }
 
 void StarLedManager::handleIdleState()
@@ -173,23 +160,21 @@ void StarLedManager::handleIdleState()
     FastLED.clear(true);
     for (int i = 0; i < NUM_DAYS; i++)
     {
-        CRGB ledColor;
+        CHSV ledColor;
         if (_completionState[i] == 2)
         {
             ledColor = COLOR_GOLD;
-            ledColor = ledColor.subtractFromRGB(quadwave8(_ledAnimationState[i] >> 8) * 0.2);
         }
         else if (_completionState[i] == 1)
         {
             ledColor = COLOR_SILVER;
-            ledColor = ledColor.subtractFromRGB(quadwave8(_ledAnimationState[i] >> 8) * 0.2);
         }
         else
         {
-            ledColor = getColor(_ledAnimationState[i]).subtractFromRGB(160);
+            ledColor = getColor(_ledAnimationState[i]);
         }
         _leds[_dayToLedMap[i]] = ledColor;
-        _ledAnimationState[i] = (_ledAnimationState[i] + 50) % 65535;
+        _ledAnimationState[i] = (_ledAnimationState[i] + 100) % 65536;
     }
     FastLED.setBrightness(25);
     FastLED.show();
