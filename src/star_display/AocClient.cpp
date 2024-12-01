@@ -95,6 +95,7 @@ void AocClient::setup()
     Serial.print(F("Current time: "));
     _printTime(_ntpClient.getEpochTime());
     _starLedManager->updateProgress(0.60);
+    _starLedManager->updateCompletionState(_completionState);
 }
 
 void AocClient::loop()
@@ -131,6 +132,7 @@ void AocClient::loop()
         _updateRequested = false;
 
         _update();
+        _starLedManager->updateCompletionState(_completionState);
     }
 
     _starLedManager->updateProgress(1.00);
