@@ -84,7 +84,7 @@ void StarLedManager::setup()
     FastLED.show();
 }
 
-void StarLedManager::loop()
+void StarLedManager::loop(unsigned long totalTime, unsigned long frameTime)
 {
     switch (_currentState)
     {
@@ -95,7 +95,6 @@ void StarLedManager::loop()
         handleIdleState();
         break;
     }
-    delay(25);
 }
 
 void StarLedManager::updateProgress(float percentage)
@@ -166,7 +165,7 @@ CHSV getColorForAnimationState(uint16_t stateIn)
 
 void StarLedManager::handleIdleState()
 {
-    FastLED.clear(true);
+    FastLED.clear();
     for (int i = 0; i < NUM_DAYS; i++)
     {
         CRGB ledColor;
@@ -247,6 +246,6 @@ void StarLedManager::handleIdleState()
         _leds[_dayToLedMap[i]] = ledColor;
         // _ledAnimationState[i] = (_ledAnimationState[i] + 100) % 65536;
     }
-    FastLED.setBrightness(25);
+    FastLED.setBrightness(50);
     FastLED.show();
 }

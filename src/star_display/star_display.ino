@@ -8,6 +8,9 @@
 
 /*****************  GLOBAL VARIABLES  ****************************************/
 
+const int targetFrameTimeMillis = 1000 / 1;
+unsigned long prevFrameStartTime = 0;
+
 /* Wifi */
 char ssid[] = SECRET_SSID; // from "arduino_secrets.h"
 char pass[] = SECRET_PASS; // from "arduino_secrets.h"
@@ -62,7 +65,18 @@ void setup()
 /*****************  MAIN LOOP  ****************************************/
 void loop()
 {
-  starLedManager->loop();
+  unsigned long frameStartTime = millis();
+  unsigned long prevFrameMs = frameStartTime - prevFrameStartTime;
+  unsigned int remainingFrameMs = max(0, targetFrameTimeMillis - min(targetFrameTimeMillis, prevFrameMs));
+  if (remainingFrameMs > 0)
+  {
+    delay(remainingFrameMs);
+    frameStartTime = millis();
+    prevFrameMs = frameStartTime - prevFrameStartTime;
+  }
+  prevFrameStartTime = frameStartTime;
+
+  starLedManager->loop(frameStartTime, prevFrameMs);
   aocClient->loop();
   webServer->loop();
 }
