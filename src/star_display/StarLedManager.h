@@ -6,6 +6,7 @@
 #include <set>
 #include "Common.h"
 #include "FallingStarAnimation.h"
+#include <memory>
 
 #define NUM_LEDS 43
 #define LED_STRIP_DATA_PIN 4
@@ -33,13 +34,14 @@ private:
     int _idx;
     StarDisplayState _currentState; // State variable to keep track of the current display type
     float _progress;                // Field to store the progress value
-    uint8_t _completionState[NUM_DAYS] = {0};
+    uint8_t _knownCompletionState[NUM_DAYS] = {0};
+    uint8_t _displayedCompletionState[NUM_DAYS] = {0};
 
     void handleLoadingState();
     void handleIdleState();
+    void handleAnimations(unsigned long totalTime, unsigned long frameTime);
 
-    FallingStarAnimation *_fallingStarAnimation;
-
+    std::vector<std::unique_ptr<FallingStarAnimation>> _queuedAnimations;
     std::vector<std::set<int>> _columns = {
         {33, 34, 41, 42},
         {0, 19, 20, 31, 36, 39},

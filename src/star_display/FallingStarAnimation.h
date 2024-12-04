@@ -7,7 +7,8 @@
 class FallingStarAnimation : public StarAnimation
 {
 public:
-    FallingStarAnimation(CRGB *leds, unsigned long animationLengthMs, uint8_t day);
+    FallingStarAnimation(CRGB *leds, long animationLengthMs, long elapsedMs, uint8_t day, CRGB starColor);
     virtual StarAnimationState draw(unsigned long applicationTimeMs, unsigned long lastFrameMs) override;
     u_int8_t day;
+    CRGB starColor;
 };

@@ -3,6 +3,7 @@
 #include <FastLED.h>
 #include <cmath>
 #include <set>
+#include <memory>
 
 const CRGB COLOR_GOLD = CRGB(255, 255, 0); // CHSV(64, 255, 255);
 const CHSV COLOR_SILVER = CHSV(64, 0, 200);
@@ -28,19 +29,7 @@ void StarLedManager::loop(unsigned long totalTime, unsigned long frameTime)
         break;
     case STAR_IDLE:
         handleIdleState();
-        if (!_fallingStarAnimation)
-        {
-            _fallingStarAnimation = new FallingStarAnimation(_leds, 1000, 4);
-        }
-        else
-        {
-            StarAnimationState state = _fallingStarAnimation->draw(totalTime, frameTime);
-            if (state == StarAnimationState::ANIMATION_IDLE)
-            {
-                delete _fallingStarAnimation;
-                _fallingStarAnimation = nullptr;
-            }
-        }
+        handleAnimations(totalTime, frameTime);
         FastLED.setBrightness(50);
         FastLED.show();
         break;
@@ -60,14 +49,32 @@ void StarLedManager::updateProgress(float percentage)
     if (_progress >= 1)
     {
         _currentState = STAR_IDLE;
+        delay(250);
     }
 }
 
 void StarLedManager::updateCompletionState(const uint8_t newState[NUM_DAYS])
 {
-    for (int i = 0; i < NUM_DAYS; i++)
+    long animationLengthPerStarDistanceMs = 100;
+    long animationOverlapMs = 500;
+    long delayBetweenAnimations = 0;
+    for (int dayIdx = 0; dayIdx < NUM_DAYS; dayIdx++)
     {
-        _completionState[i] = newState[i];
+        uint8_t starState = newState[dayIdx];
+        if (_knownCompletionState[dayIdx] < starState)
+        {
+            // There is a new star where it was not before, animate it.
+            auto animation = std::make_unique<FallingStarAnimation>(
+                _leds, animationLengthPerStarDistanceMs, -1 * delayBetweenAnimations, dayIdx, starState == 1 ? COLOR_SILVER : COLOR_GOLD);
+            delayBetweenAnimations += (*animation).animationLengthMs - animationOverlapMs;
+            _queuedAnimations.push_back(std::move(animation));
+        }
+        else
+        {
+            // There is no star when there was before, just update it's state.
+            _displayedCompletionState[dayIdx] = starState;
+        }
+        _knownCompletionState[dayIdx] = starState;
     }
 }
 
@@ -98,9 +105,9 @@ void StarLedManager::handleLoadingState()
 {
     FastLED.clear();
     int numLedsToLight = static_cast<int>(_progress * NUM_DAYS);
-    for (int i = 0; i < numLedsToLight; i++)
+    for (int i = 0; i < NUM_DAYS; i++)
     {
-        _leds[DAY_TO_LED_MAP[i]] = CRGB(0, 255, 0); // Green color
+        _leds[DAY_TO_LED_MAP[i]] = i < numLedsToLight ? CRGB(0, 255, 0) : CRGB(128, 0, 0);
     }
     FastLED.setBrightness(25); // Set brightness to faint
     FastLED.show();
@@ -119,11 +126,11 @@ void StarLedManager::handleIdleState()
     for (int i = 0; i < NUM_DAYS; i++)
     {
         CRGB ledColor;
-        if (_completionState[i] == 2)
+        if (_displayedCompletionState[i] == 2)
         {
             ledColor = COLOR_GOLD;
         }
-        else if (_completionState[i] == 1)
+        else if (_displayedCompletionState[i] == 1)
         {
             ledColor = COLOR_SILVER;
         }
@@ -198,4 +205,22 @@ void StarLedManager::handleIdleState()
     }
     // FastLED.setBrightness(50);
     // FastLED.show();
+}
+
+void StarLedManager::handleAnimations(unsigned long totalTime, unsigned long frameTime)
+{
+    for (auto it = _queuedAnimations.begin(); it != _queuedAnimations.end();)
+    {
+        StarAnimationState state = (*it)->draw(totalTime, frameTime);
+        if (state == StarAnimationState::ANIMATION_IDLE)
+        {
+            uint8_t animatedDay = (*it)->day;
+            _displayedCompletionState[animatedDay] = _knownCompletionState[animatedDay];
+            it = _queuedAnimations.erase(it);
+        }
+        else
+        {
+            ++it;
+        }
+    }
 }

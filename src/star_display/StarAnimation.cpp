@@ -1,14 +1,15 @@
 #include "StarAnimation.h"
 
-StarAnimation::StarAnimation(CRGB *leds, unsigned long animationLengthMs) : _leds(leds), _animationLengthMs(animationLengthMs)
+StarAnimation::StarAnimation(CRGB *leds, long animationLengthMs, long elapsedMs)
+    : _leds(leds), animationLengthMs(animationLengthMs), _elapsedMs(elapsedMs)
 {
 }
 
 StarAnimationState StarAnimation::draw(unsigned long applicationTimeMs, unsigned long lastFrameMs)
 {
-    if (_elapsedMs < _animationLengthMs)
+    if (_elapsedMs < animationLengthMs)
     {
         _elapsedMs += lastFrameMs;
     }
-    return _elapsedMs >= _animationLengthMs ? StarAnimationState::ANIMATION_IDLE : StarAnimationState::ANIMATION_IN_PROGRESS;
+    return _elapsedMs >= animationLengthMs ? StarAnimationState::ANIMATION_IDLE : StarAnimationState::ANIMATION_IN_PROGRESS;
 }
