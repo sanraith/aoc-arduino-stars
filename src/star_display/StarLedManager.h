@@ -4,12 +4,13 @@
 #include <map>
 #include <vector>
 #include <set>
+#include "Common.h"
+#include "FallingStarAnimation.h"
 
 #define NUM_LEDS 43
 #define LED_STRIP_DATA_PIN 4
 #define GRID_WIDTH 11
 #define GRID_HEIGHT 8
-#define NUM_DAYS 25
 
 enum StarDisplayState
 {
@@ -30,16 +31,14 @@ public:
 private:
     CRGB _leds[NUM_LEDS];
     int _idx;
-    int _dayToLedMap[NUM_DAYS];
-    std::vector<std::vector<int>> _ledGrid; // 2D grid to store LED positions (rows)
-    StarDisplayState _currentState;         // State variable to keep track of the current display type
-    float _progress;                        // Field to store the progress value
+    StarDisplayState _currentState; // State variable to keep track of the current display type
+    float _progress;                // Field to store the progress value
     uint8_t _completionState[NUM_DAYS] = {0};
-
-    uint16_t _ledAnimationState[NUM_DAYS] = {0};
 
     void handleLoadingState();
     void handleIdleState();
+
+    FallingStarAnimation *_fallingStarAnimation;
 
     std::vector<std::set<int>> _columns = {
         {33, 34, 41, 42},

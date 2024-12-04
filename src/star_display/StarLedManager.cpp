@@ -1,4 +1,5 @@
 #include "StarLedManager.h"
+#include "FallingStarAnimation.h"
 #include <FastLED.h>
 #include <cmath>
 #include <set>
@@ -8,72 +9,6 @@ const CHSV COLOR_SILVER = CHSV(64, 0, 200);
 
 StarLedManager::StarLedManager() : _idx(0), _currentState(STAR_LOADING), _progress(0.0f)
 {
-    //       42
-    //     41 39
-    //    34 36 38
-    //   33 31 29 27
-    //   20 22 24 26
-    //  19 17 15 13 11
-    // 0  2  4  6  8  10
-
-    // Row 1
-    _dayToLedMap[0] = 0;
-    _dayToLedMap[1] = 2;
-    _dayToLedMap[2] = 4;
-    _dayToLedMap[3] = 6;
-    _dayToLedMap[4] = 8;
-    _dayToLedMap[5] = 10;
-
-    // Row 2
-    _dayToLedMap[6] = 11;
-    _dayToLedMap[7] = 13;
-    _dayToLedMap[8] = 15;
-    _dayToLedMap[9] = 17;
-    _dayToLedMap[10] = 19;
-
-    // Row 3
-    _dayToLedMap[11] = 20;
-    _dayToLedMap[12] = 22;
-    _dayToLedMap[13] = 24;
-    _dayToLedMap[14] = 26;
-
-    // Row 4
-    _dayToLedMap[15] = 27;
-    _dayToLedMap[16] = 29;
-    _dayToLedMap[17] = 31;
-    _dayToLedMap[18] = 33;
-
-    // Row 5
-    _dayToLedMap[19] = 34;
-    _dayToLedMap[20] = 36;
-    _dayToLedMap[21] = 38;
-
-    // Row 6
-    _dayToLedMap[22] = 39;
-    _dayToLedMap[23] = 41;
-
-    // Row 7
-    _dayToLedMap[24] = 42;
-
-    // Initialize the 2D grid with -1 (indicating no LED)
-    _ledGrid.resize(GRID_HEIGHT);
-    for (int i = 0; i < GRID_HEIGHT; i++)
-    {
-        _ledGrid[i].resize(GRID_WIDTH, -1);
-    }
-
-    int colorTypes = 4;
-    int maxState = 65535;
-    int maxDelta = maxState / 25;
-    // Randomly assign LEDs to the grid for now
-    for (int i = 0; i < NUM_DAYS; i++)
-    {
-        int x = random(GRID_WIDTH);
-        int y = random(GRID_HEIGHT);
-        _ledGrid[y][x] = i;
-
-        _ledAnimationState[i] = (random(colorTypes) * (maxState / colorTypes) + random(maxDelta)) % maxState;
-    }
 }
 
 void StarLedManager::setup()
@@ -93,6 +28,21 @@ void StarLedManager::loop(unsigned long totalTime, unsigned long frameTime)
         break;
     case STAR_IDLE:
         handleIdleState();
+        if (!_fallingStarAnimation)
+        {
+            _fallingStarAnimation = new FallingStarAnimation(_leds, 1000, 4);
+        }
+        else
+        {
+            StarAnimationState state = _fallingStarAnimation->draw(totalTime, frameTime);
+            if (state == StarAnimationState::ANIMATION_IDLE)
+            {
+                delete _fallingStarAnimation;
+                _fallingStarAnimation = nullptr;
+            }
+        }
+        FastLED.setBrightness(50);
+        FastLED.show();
         break;
     }
 }
@@ -130,12 +80,12 @@ std::vector<int> StarLedManager::getNearbyDayIds(int x, int y)
     {
         for (int j = 0; j < GRID_WIDTH; j++)
         {
-            if (_ledGrid[i][j] != -1)
+            if (LED_GRID[i][j] != -1)
             {
                 double distance = sqrt(pow(x - j, 2) + pow(y - i, 2));
                 if (distance <= maxDistance)
                 {
-                    nearbyDayIds.push_back(_ledGrid[i][j]);
+                    nearbyDayIds.push_back(LED_GRID[i][j]);
                 }
             }
         }
@@ -150,7 +100,7 @@ void StarLedManager::handleLoadingState()
     int numLedsToLight = static_cast<int>(_progress * NUM_DAYS);
     for (int i = 0; i < numLedsToLight; i++)
     {
-        _leds[_dayToLedMap[i]] = CRGB(0, 255, 0); // Green color
+        _leds[DAY_TO_LED_MAP[i]] = CRGB(0, 255, 0); // Green color
     }
     FastLED.setBrightness(25); // Set brightness to faint
     FastLED.show();
@@ -180,7 +130,7 @@ void StarLedManager::handleIdleState()
         else
         {
             // Color by 45° columns
-            int ledId = _dayToLedMap[i];
+            int ledId = DAY_TO_LED_MAP[i];
             int columnIdx;
             for (columnIdx = 0; columnIdx < _columns.size(); columnIdx++)
             {
@@ -243,9 +193,9 @@ void StarLedManager::handleIdleState()
             // ledColor = getColor(_ledAnimationState[i]);
         }
 
-        _leds[_dayToLedMap[i]] = ledColor;
+        _leds[DAY_TO_LED_MAP[i]] = ledColor;
         // _ledAnimationState[i] = (_ledAnimationState[i] + 100) % 65536;
     }
-    FastLED.setBrightness(50);
-    FastLED.show();
+    // FastLED.setBrightness(50);
+    // FastLED.show();
 }

@@ -8,7 +8,7 @@
 
 /*****************  GLOBAL VARIABLES  ****************************************/
 
-const int targetFrameTimeMillis = 1000 / 1;
+const int targetFrameTimeMillis = 1000 / 30; // 30 fps
 unsigned long prevFrameStartTime = 0;
 
 /* Wifi */
