@@ -2,6 +2,7 @@
 
 #include <cmath>
 #include <cstdint>
+#include <tuple> // for std::tie
 
 #define NUM_DAYS 25
 
@@ -17,14 +18,16 @@
 // 0  2  4  6  8  10
 
 /** Led ids arranged into a grid that estimates their real-world position. */
-const int8_t LED_GRID[10][11] = {
+const uint8_t LED_GRID_HEIGHT = 7; // 10;
+const uint8_t LED_GRID_WIDTH = 11;
+const int8_t LED_GRID[LED_GRID_HEIGHT][LED_GRID_WIDTH] = {
     {-1, -1, -1, -1, -1, 42, -1, -1, -1, -1, -1},
-    {-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
+    // {-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
     {-1, -1, -1, -1, 41, -1, 39, -1, -1, -1, -1},
-    {-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
+    // {-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
     {-1, -1, -1, 34, -1, 36, -1, 38, -1, -1, -1},
     {-1, -1, 33, -1, 31, -1, 29, -1, 27, -1, -1},
-    {-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
+    // {-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
     {-1, -1, 20, -1, 22, -1, 24, -1, 26, -1, -1},
     {-1, 19, -1, 17, -1, 15, -1, 13, -1, 11, -1},
     {0., -1, 2., -1, 4., -1, 6., -1, 8., -1, 10}};
@@ -40,7 +43,56 @@ const uint8_t DAY_TO_LED_MAP[NUM_DAYS] = {
     42                  // Row 7 (top)
 };
 
-double easeInOutExpo(double x);
+struct Point
+{
+    float x;
+    float y;
+
+    // Constructor
+    Point() : x(0), y(0) {}
+    Point(float x, float y) : x(x), y(y) {}
+
+    // Equality operator
+    bool operator==(const Point &other) const
+    {
+        return std::tie(x, y) == std::tie(other.x, other.y);
+    }
+
+    // Inequality operator
+    bool operator!=(const Point &other) const
+    {
+        return !(*this == other);
+    }
+
+    // Less than operator (for sorting)
+    bool operator<(const Point &other) const
+    {
+        return std::tie(x, y) < std::tie(other.x, other.y);
+    }
+
+    Point operator+(Point other) const
+    {
+        return Point(x + other.x, y + other.y);
+    }
+
+    // Multiplication by scalar operator
+    Point operator*(float scalar) const
+    {
+        return Point(x * scalar, y * scalar);
+    }
+
+    // Distance method
+    float distance(const Point &other) const
+    {
+        float dx = x - other.x;
+        float dy = y - other.y;
+        return sqrt(dx * dx + dy * dy);
+    }
+};
+
+float easeInCubic(float x);
+float easeOutCubic(float x);
 double easeOutBounce(double x);
+double easeInOutExpo(double x);
 double easeInOutBounce(double x);
 double easeInOutQuart(double x);

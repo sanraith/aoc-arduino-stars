@@ -30,6 +30,16 @@ double easeOutBounce(double x)
     }
 }
 
+float easeOutCubic(float x)
+{
+    return 1 - pow(1 - x, 3);
+}
+
+float easeInCubic(float x)
+{
+    return x * x * x;
+}
+
 double easeInOutBounce(double x)
 {
     return x < 0.5

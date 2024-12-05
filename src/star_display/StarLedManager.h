@@ -6,7 +6,8 @@
 #include <set>
 #include <memory>
 #include "Common.h"
-#include "FallingStarAnimation.h"
+#include "FallingStarZigZagAnimation.h"
+#include "FallingStarGeometricAnimation.h"
 
 #define NUM_LEDS 43
 #define LED_STRIP_DATA_PIN 4
@@ -40,7 +41,7 @@ private:
     void handleIdleState();
     void handleAnimations(unsigned long totalTime, unsigned long frameTime);
 
-    std::vector<std::unique_ptr<FallingStarAnimation>> _queuedAnimations;
+    std::vector<std::unique_ptr<FallingStarZigZagAnimation>> _queuedAnimations;
     std::vector<std::unique_ptr<StarAnimation>> _continuousAnimations;
     std::vector<std::set<int>> _columns = {
         {33, 34, 41, 42},

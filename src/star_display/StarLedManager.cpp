@@ -1,5 +1,6 @@
 #include "StarLedManager.h"
-#include "FallingStarAnimation.h"
+#include "FallingStarZigZagAnimation.h"
+#include "FallingStarGeometricAnimation.h"
 #include <FastLED.h>
 #include <cmath>
 #include <set>
@@ -60,21 +61,69 @@ void StarLedManager::updateProgress(float percentage)
     }
 }
 
+void makeAnimation(
+    int animationType, CRGB *_leds, long animationLengthPerStarDistanceMs, long *delayBetweenAnimations,
+    uint8_t dayIdx, long animationOverlapMs, std::vector<std::unique_ptr<FallingStarZigZagAnimation>> *_queuedAnimations, CRGB color)
+{
+    std::unique_ptr<FallingStarZigZagAnimation> animation;
+    if (animationType == 0)
+    {
+        animationOverlapMs = 500;
+        animation = std::make_unique<FallingStarZigZagAnimation>(
+            _leds, animationLengthPerStarDistanceMs * (NUM_DAYS - dayIdx), -1 * *delayBetweenAnimations, dayIdx, color);
+    }
+    else
+    {
+        animationOverlapMs = 500 + random16(500);
+        animation = std::make_unique<FallingStarGeometricAnimation>(
+            _leds, animationLengthPerStarDistanceMs * 15, -1 * *delayBetweenAnimations, dayIdx, color);
+    }
+    (*delayBetweenAnimations) += (*animation).animationLengthMs - animationOverlapMs;
+    _queuedAnimations->push_back(std::move(animation));
+}
+
 void StarLedManager::updateCompletionState(const uint8_t newState[NUM_DAYS])
 {
     long animationLengthPerStarDistanceMs = 100;
-    long animationOverlapMs = 500;
     long delayBetweenAnimations = 0;
+    long animationOverlapMs = 500;
+
+    int knownStarsCount = 0;
+    for (int i = 0; i < NUM_DAYS; i++)
+    {
+        knownStarsCount += _knownCompletionState[i];
+    }
+
+    int animationType = knownStarsCount == 0 ? 1 : 0;
+    boolean areSilversSeparate = animationType == 1;
+
+    if (areSilversSeparate)
+    {
+        // Queue silver star animations first if requested
+        for (int dayIdx = 0; dayIdx < NUM_DAYS; dayIdx++)
+        {
+            uint8_t starState = newState[dayIdx];
+            if (_knownCompletionState[dayIdx] < starState)
+            {
+                // There is a new star where it was not before, animate it.
+                makeAnimation(animationType, _leds, animationLengthPerStarDistanceMs, &delayBetweenAnimations, dayIdx, animationOverlapMs, &_queuedAnimations, COLOR_SILVER);
+            }
+            else
+            {
+                // There is no star when there was before, just update it's state.
+                _displayedCompletionState[dayIdx] = starState;
+            }
+            _knownCompletionState[dayIdx] = min(1, starState);
+        }
+    }
+
     for (int dayIdx = 0; dayIdx < NUM_DAYS; dayIdx++)
     {
         uint8_t starState = newState[dayIdx];
         if (_knownCompletionState[dayIdx] < starState)
         {
             // There is a new star where it was not before, animate it.
-            auto animation = std::make_unique<FallingStarAnimation>(
-                _leds, animationLengthPerStarDistanceMs, -1 * delayBetweenAnimations, dayIdx, starState == 1 ? COLOR_SILVER : COLOR_GOLD);
-            delayBetweenAnimations += (*animation).animationLengthMs - animationOverlapMs;
-            _queuedAnimations.push_back(std::move(animation));
+            makeAnimation(animationType, _leds, animationLengthPerStarDistanceMs, &delayBetweenAnimations, dayIdx, animationOverlapMs, &_queuedAnimations, starState == 2 ? COLOR_GOLD : COLOR_SILVER);
         }
         else
         {
@@ -87,7 +136,7 @@ void StarLedManager::updateCompletionState(const uint8_t newState[NUM_DAYS])
     // Start the background animation after the initial stars animations are completed
     if (_continuousAnimations.empty())
     {
-        _continuousAnimations.push_back(std::make_unique<BackgroundAnimation>(_leds, 7500, -delayBetweenAnimations));
+        _continuousAnimations.push_back(std::make_unique<BackgroundAnimation>(_leds, 7500, -delayBetweenAnimations - 1000));
     }
 }
 
@@ -155,7 +204,7 @@ void StarLedManager::handleAnimations(unsigned long totalTime, unsigned long fra
         if (state == StarAnimationState::ANIMATION_IDLE)
         {
             uint8_t animatedDay = (*it)->day;
-            _displayedCompletionState[animatedDay] = _knownCompletionState[animatedDay];
+            _displayedCompletionState[animatedDay] = (*it)->starColor == COLOR_GOLD ? 2 : 1;
             it = _queuedAnimations.erase(it);
         }
         else

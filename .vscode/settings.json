@@ -62,5 +62,9 @@
         "cinttypes": "cpp",
         "typeinfo": "cpp",
         "variant": "cpp"
-    }
+    },
+    "files.watcherExclude": {
+        "**/target": true
+    },
+    "C_Cpp.errorSquiggles": "enabled"
 }

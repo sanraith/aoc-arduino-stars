@@ -1,12 +1,12 @@
 #include "StarAnimation.h"
-#include "FallingStarAnimation.h"
+#include "FallingStarZigZagAnimation.h"
 
-FallingStarAnimation::FallingStarAnimation(CRGB *leds, long animationLengthMs, long elapsedMs, uint8_t day, CRGB starColor)
-    : StarAnimation(leds, animationLengthMs * (NUM_DAYS - day), elapsedMs), day(day), starColor(starColor)
+FallingStarZigZagAnimation::FallingStarZigZagAnimation(CRGB *leds, long animationLengthMs, long elapsedMs, uint8_t day, CRGB starColor)
+    : StarAnimation(leds, animationLengthMs, elapsedMs), day(day), starColor(starColor)
 {
 }
 
-StarAnimationState FallingStarAnimation::draw(unsigned long applicationTimeMs, unsigned long lastFrameMs)
+StarAnimationState FallingStarZigZagAnimation::draw(unsigned long applicationTimeMs, unsigned long lastFrameMs)
 {
     StarAnimationState state = StarAnimation::draw(applicationTimeMs, lastFrameMs);
     if (_elapsedMs < 0)
