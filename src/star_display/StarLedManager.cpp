@@ -4,11 +4,12 @@
 #include <cmath>
 #include <set>
 #include <memory>
+#include "BackgroundAnimation.h"
 
 const CRGB COLOR_GOLD = CRGB(255, 255, 0); // CHSV(64, 255, 255);
 const CHSV COLOR_SILVER = CHSV(64, 0, 200);
 
-StarLedManager::StarLedManager() : _idx(0), _currentState(STAR_LOADING), _progress(0.0f)
+StarLedManager::StarLedManager() : _currentState(STAR_LOADING), _progress(0.0f)
 {
 }
 
@@ -28,6 +29,12 @@ void StarLedManager::loop(unsigned long totalTime, unsigned long frameTime)
         handleLoadingState();
         break;
     case STAR_IDLE:
+        FastLED.clear();
+        for (auto it = _continuousAnimations.begin(); it != _continuousAnimations.end(); it++)
+        {
+            // Serial.println("starting star bg ");
+            (*it)->draw(totalTime, frameTime);
+        }
         handleIdleState();
         handleAnimations(totalTime, frameTime);
         FastLED.setBrightness(50);
@@ -76,6 +83,12 @@ void StarLedManager::updateCompletionState(const uint8_t newState[NUM_DAYS])
         }
         _knownCompletionState[dayIdx] = starState;
     }
+
+    // Start the background animation after the initial stars animations are completed
+    if (_continuousAnimations.empty())
+    {
+        _continuousAnimations.push_back(std::make_unique<BackgroundAnimation>(_leds, 7500, -delayBetweenAnimations));
+    }
 }
 
 std::vector<int> StarLedManager::getNearbyDayIds(int x, int y)
@@ -113,16 +126,8 @@ void StarLedManager::handleLoadingState()
     FastLED.show();
 }
 
-CHSV getColorForAnimationState(uint16_t stateIn)
-{
-    uint8_t state = stateIn >> 8;
-    CHSV color = CHSV(state, 255, 255);
-    return color;
-}
-
 void StarLedManager::handleIdleState()
 {
-    FastLED.clear();
     for (int i = 0; i < NUM_DAYS; i++)
     {
         CRGB ledColor;
@@ -136,75 +141,10 @@ void StarLedManager::handleIdleState()
         }
         else
         {
-            // Color by 45° columns
-            int ledId = DAY_TO_LED_MAP[i];
-            int columnIdx;
-            for (columnIdx = 0; columnIdx < _columns.size(); columnIdx++)
-            {
-                std::set<int> mySet = _columns.at(columnIdx);
-                if (mySet.find(ledId) != mySet.end())
-                {
-                    break;
-                }
-            }
-            int colorIdx = columnIdx % 3;
-            switch (colorIdx)
-            {
-            case 0:
-                ledColor = CRGB::OrangeRed;
-                break;
-            case 2:
-                ledColor = CRGB::RoyalBlue;
-                break;
-            case 1:
-                ledColor = CRGB::ForestGreen;
-                break;
-            }
-            if (i != 24)
-            {
-                ledColor.fadeToBlackBy(160);
-            }
-
-            // Color equally by dark colors
-            // int colorIdx = _dayToLedMap[i] % 3;
-            // switch (colorIdx)
-            // {
-            // case 0:
-            //     ledColor = CRGB::DarkOrange;
-            //     break;
-            // case 1:
-            //     ledColor = CRGB::BlueViolet;
-            //     break;
-            // case 2:
-            //     ledColor = CRGB::DarkCyan;
-            //     break;
-            // }
-            // ledColor.fadeToBlackBy(128);
-
-            // Color each row with red/blue
-            // int colorIdx = _dayToLedMap[i] % 2;
-            // switch (colorIdx)
-            // {
-            // case 0:
-            //     ledColor = CRGB::DarkRed;
-            //     break;
-            // case 1:
-            //     ledColor = CRGB::DarkBlue;
-            //     break;
-            //     // case 2:
-            //     //     ledColor = CRGB::DarkCyan;
-            //     //     break;
-            // }
-            // ledColor.fadeToBlackBy(64);
-
-            // ledColor = getColor(_ledAnimationState[i]);
+            continue;
         }
-
         _leds[DAY_TO_LED_MAP[i]] = ledColor;
-        // _ledAnimationState[i] = (_ledAnimationState[i] + 100) % 65536;
     }
-    // FastLED.setBrightness(50);
-    // FastLED.show();
 }
 
 void StarLedManager::handleAnimations(unsigned long totalTime, unsigned long frameTime)

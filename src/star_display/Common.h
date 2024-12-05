@@ -1,5 +1,8 @@
 #pragma once
 
+#include <cmath>
+#include <cstdint>
+
 #define NUM_DAYS 25
 
 //       42
@@ -36,3 +39,8 @@ const uint8_t DAY_TO_LED_MAP[NUM_DAYS] = {
     39, 41,             // Row 6
     42                  // Row 7 (top)
 };
+
+double easeInOutExpo(double x);
+double easeOutBounce(double x);
+double easeInOutBounce(double x);
+double easeInOutQuart(double x);

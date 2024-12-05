@@ -246,8 +246,8 @@ void AocClient::_update()
     {
         Serial.print(F("Status code: "));
         Serial.println(statusCode);
-        Serial.print(F("Response: "));
-        Serial.println(_httpClient->responseBody());
+        // Serial.print(F("Response: "));
+        // Serial.println(_httpClient->responseBody());
         _retryLater();
         return;
     }
@@ -301,9 +301,6 @@ void AocClient::_update()
     EEPROM.put(_memoryMap.at(EEPROM_LAST_UPDATE_EPOCH), _lastUpdateEpoch);
     EEPROM.put(_memoryMap.at(EEPROM_COMPLETION_STATE), _completionState);
     Serial.println(F("Save completed."));
-
-    _starLedManager->updateProgress(0.75); // Update progress to 75%
-    _starLedManager->updateProgress(1.0);  // Update progress to 100%
 }
 
 /** Return the latest available day (1 for the 1st) of Advent of Code in the given year based on the current time. */

@@ -44,7 +44,7 @@ void LocalServer::loop()
             if (client.available())
             {                           // if there's bytes to read from the client,
                 char c = client.read(); // read a byte, then
-                Serial.write(c);        // print it out to the serial monitor
+                // Serial.write(c);        // print it out to the serial monitor
                 if (c == '\n')
                 { // if the byte is a newline character
 

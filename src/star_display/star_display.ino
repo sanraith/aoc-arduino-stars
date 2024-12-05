@@ -8,7 +8,7 @@
 
 /*****************  GLOBAL VARIABLES  ****************************************/
 
-const int targetFrameTimeMillis = 1000 / 30; // 30 fps
+const int targetFrameTimeMs = 1000 / 30; // 30 fps
 unsigned long prevFrameStartTime = 0;
 
 /* Wifi */
@@ -67,7 +67,7 @@ void loop()
 {
   unsigned long frameStartTime = millis();
   unsigned long prevFrameMs = frameStartTime - prevFrameStartTime;
-  unsigned int remainingFrameMs = max(0, targetFrameTimeMillis - min(targetFrameTimeMillis, prevFrameMs));
+  unsigned int remainingFrameMs = max(0, targetFrameTimeMs - min(targetFrameTimeMs, prevFrameMs));
   if (remainingFrameMs > 0)
   {
     delay(remainingFrameMs);
@@ -75,6 +75,9 @@ void loop()
     prevFrameMs = frameStartTime - prevFrameStartTime;
   }
   prevFrameStartTime = frameStartTime;
+
+  // Slow down animations in case of long frame times instead of skipping a large chunk of them
+  prevFrameMs = min(targetFrameTimeMs * 2, prevFrameMs);
 
   starLedManager->loop(frameStartTime, prevFrameMs);
   aocClient->loop();

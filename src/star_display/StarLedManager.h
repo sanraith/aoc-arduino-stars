@@ -4,9 +4,9 @@
 #include <map>
 #include <vector>
 #include <set>
+#include <memory>
 #include "Common.h"
 #include "FallingStarAnimation.h"
-#include <memory>
 
 #define NUM_LEDS 43
 #define LED_STRIP_DATA_PIN 4
@@ -31,7 +31,6 @@ public:
 
 private:
     CRGB _leds[NUM_LEDS];
-    int _idx;
     StarDisplayState _currentState; // State variable to keep track of the current display type
     float _progress;                // Field to store the progress value
     uint8_t _knownCompletionState[NUM_DAYS] = {0};
@@ -42,6 +41,7 @@ private:
     void handleAnimations(unsigned long totalTime, unsigned long frameTime);
 
     std::vector<std::unique_ptr<FallingStarAnimation>> _queuedAnimations;
+    std::vector<std::unique_ptr<StarAnimation>> _continuousAnimations;
     std::vector<std::set<int>> _columns = {
         {33, 34, 41, 42},
         {0, 19, 20, 31, 36, 39},
