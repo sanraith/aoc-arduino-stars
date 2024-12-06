@@ -77,6 +77,7 @@ void makeAnimation(
         animationOverlapMs = 500 + random16(500);
         animation = std::make_unique<FallingStarGeometricAnimation>(
             _leds, animationLengthPerStarDistanceMs * 15, -1 * *delayBetweenAnimations, dayIdx, color);
+        // TODO make length proportional to distance
     }
     (*delayBetweenAnimations) += (*animation).animationLengthMs - animationOverlapMs;
     _queuedAnimations->push_back(std::move(animation));
@@ -97,6 +98,7 @@ void StarLedManager::updateCompletionState(const uint8_t newState[NUM_DAYS])
     int animationType = knownStarsCount == 0 ? 1 : 0;
     boolean areSilversSeparate = animationType == 1;
 
+    // TODO group initial animations by line, by color
     if (areSilversSeparate)
     {
         // Queue silver star animations first if requested
@@ -138,29 +140,6 @@ void StarLedManager::updateCompletionState(const uint8_t newState[NUM_DAYS])
     {
         _continuousAnimations.push_back(std::make_unique<BackgroundAnimation>(_leds, 7500, -delayBetweenAnimations - 1000));
     }
-}
-
-std::vector<int> StarLedManager::getNearbyDayIds(int x, int y)
-{
-    std::vector<int> nearbyDayIds;
-    int maxDistance = 2;
-
-    for (int i = 0; i < GRID_HEIGHT; i++)
-    {
-        for (int j = 0; j < GRID_WIDTH; j++)
-        {
-            if (LED_GRID[i][j] != -1)
-            {
-                double distance = sqrt(pow(x - j, 2) + pow(y - i, 2));
-                if (distance <= maxDistance)
-                {
-                    nearbyDayIds.push_back(LED_GRID[i][j]);
-                }
-            }
-        }
-    }
-
-    return nearbyDayIds;
 }
 
 void StarLedManager::handleLoadingState()

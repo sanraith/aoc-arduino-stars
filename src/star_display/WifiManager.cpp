@@ -8,6 +8,7 @@ WifiManager::WifiManager(char ssid[], char pass[], StarLedManager *starLedManage
 void WifiManager::setIpAddress(char ipAddress[])
 {
     WiFi.config(IPAddress(ipAddress));
+    WiFi.setTimeout(5000);
 }
 
 void printWifiStatus()
@@ -51,13 +52,18 @@ void WifiManager::setup()
     // attempt to connect to WiFi network:
     while (wifiStatus != WL_CONNECTED)
     {
+        _starLedManager->updateProgress(0.20);
         Serial.print("Attempting to connect to Network named: ");
         Serial.println(_ssid); // print the network name (SSID);
 
         // Connect to WPA/WPA2 network. Change this line if using open or WEP network:
         wifiStatus = WiFi.begin(_ssid, _pass);
-        // wait 10 seconds for connection:
-        delay(1000);
+
+        // wait a bit, then retry again
+        if (wifiStatus != WL_CONNECTED)
+        {
+            delay(500);
+        }
     }
     _starLedManager->updateProgress(0.40);
 

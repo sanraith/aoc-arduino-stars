@@ -26,7 +26,6 @@ public:
     StarLedManager();
     void setup();
     void loop(unsigned long totalTime, unsigned long frameTime);
-    std::vector<int> getNearbyDayIds(int x, int y);
     void updateProgress(float percentage);
     void updateCompletionState(const uint8_t newState[NUM_DAYS]);
 
