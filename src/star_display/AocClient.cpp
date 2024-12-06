@@ -95,6 +95,27 @@ void AocClient::setup()
     Serial.print(F("Current time: "));
     _printTime(_ntpClient.getEpochTime());
     _starLedManager->updateProgress(0.60);
+
+    // _completionState[6] = 2;
+    // _completionState[7] = 2;
+    // _completionState[8] = 2;
+    // _completionState[9] = 2;
+    // _completionState[10] = 2;
+    // _completionState[11] = 2;
+    // _completionState[12] = 2;
+    // _completionState[13] = 2;
+    // _completionState[14] = 2;
+    // _completionState[15] = 2;
+    // _completionState[16] = 2;
+    // _completionState[17] = 2;
+    // _completionState[18] = 2;
+    // _completionState[19] = 2;
+    // _completionState[20] = 2;
+    // _completionState[21] = 2;
+    // _completionState[22] = 2;
+    // _completionState[23] = 2;
+    // _completionState[24] = 2;
+
     _starLedManager->updateCompletionState(_completionState);
 }
 

@@ -36,7 +36,7 @@ void FallingStarGeometricAnimation::initializeDayToCoordMap()
 }
 
 FallingStarGeometricAnimation::FallingStarGeometricAnimation(CRGB *leds, long animationLengthMs, long elapsedMs, uint8_t day, CRGB starColor)
-    : FallingStarZigZagAnimation(leds, animationLengthMs, elapsedMs, day, starColor), day(day), starColor(starColor)
+    : FallingStarZigZagAnimation(leds, animationLengthMs * (LED_GRID_HEIGHT - DAY_TO_ROW_MAP[day] + 5) * 0.8, elapsedMs, day, starColor), day(day), starColor(starColor)
 {
     static bool initialized = (initializeDayToCoordMap(), true);
     randomDelta = random16(1000) / 1000.0;
@@ -76,14 +76,14 @@ StarAnimationState FallingStarGeometricAnimation::draw(unsigned long application
     // float highlightProgress = 1 - easeInCubic(easeInCubic(progress));
     float highlightProgress = 1;
 
-    float startDistance = 8;
+    float startDistance = (LED_GRID_HEIGHT - DAY_TO_ROW_MAP[day]) * 1.2;
     Point target = _dayToCoordMap[day];
-    // Point direction = Point(sin(posProgress * 5 + randomDelta * 2) * 0.65 + ((target.x - LED_GRID_WIDTH / 2) / LED_GRID_WIDTH * 2), 1);
 
     // I heard you liked magic numbers
-    Point direction = Point(((target.x - LED_GRID_WIDTH / 2) / LED_GRID_WIDTH * (1.5 + randomDelta * 2)), 1);
-    Point delta = Point(sin(posProgress * 5 + randomDelta * 20) * 2.5, 0);
-    // Point pos = target + direction * -1 * startDistance * (1.0 - posProgress);
+    Point direction = Point((target.x - LED_GRID_WIDTH / 2) / LED_GRID_WIDTH * (1.5 + randomDelta * 1.75), 1);
+    Point delta = Point(sin(posProgress * 5 + randomDelta * 3) * 2.5, 0);
+    // Point delta = Point(sin(posProgress * 5 + randomDelta * 3) * 2.5 * ((LED_GRID_HEIGHT - DAY_TO_ROW_MAP[day] - 1) / LED_GRID_HEIGHT),                        0);
+    // Point delta = Point(0, 0);
     Point pos = target + delta * (easeOutCubic(1 - posProgress)) + direction * -1 * startDistance * (1.0 - posProgress);
 
     float highlightDistance = 1 + 1.5 * highlightProgress;
