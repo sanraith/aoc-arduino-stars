@@ -41,6 +41,12 @@ const char SECRET_AOC_SESSION_KEY[] PROGMEM = "YOUR_SESSION_KEY"; // Your Advent
 #define SECRET_LEADERBOARD_PORT 5500 // Alternative port to get the leaderboard json from
 ```
 
+## How it works
+
+The arduino program queries <https://adventofcode.com> for the configured leaderboard to get the star completion state of the user then displays them it in a nice animated way. Since this is only done once every few hours, a tampermonkey script `notifier.js` is used on the client side to trigger a manual update on the arduino when a solution is completed. This ensures that new stars are displayed without delay.
+
+To have an starry Xmas tree instead of a boring led strip, I cut the strip into smaller pieces and organized into a tree shape. I then soildered the leds together again and fastened it into a 3d printed tree from behind. I also mapped the id's of the individual leds to their real world position to create 2D animations.
+
 ## Advent of Code Automation
 
 This repository does follow the automation guidelines on the /r/adventofcode [community wiki](https://www.reddit.com/r/adventofcode/wiki/faqs/automation). Specifically:
