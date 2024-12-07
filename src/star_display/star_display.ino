@@ -5,9 +5,11 @@
 #include "LocalServer.h"
 #include "StarLedManager.h"
 #include "WifiManager.h"
+#include "ButtonManager.h"
 
 /*****************  GLOBAL VARIABLES  ****************************************/
 
+const int BUTTON_PIN = 5;
 const int targetFrameTimeMs = 1000 / 40; // 40 fps
 unsigned long prevFrameStartTime = 0;
 
@@ -31,8 +33,21 @@ AocClient *aocClient;
 LocalServer *webServer;
 StarLedManager *starLedManager;
 WifiManager *wifiManager;
+ButtonManager *buttonManager;
 
 /*****************  SETUP FUNCTIONS  ****************************************/
+
+void onButtonRelease()
+{
+  Serial.println(F("button pressed, restarting animation"));
+  Serial.println(millis());
+  if (starLedManager && aocClient)
+  {
+    starLedManager->resetAnimation();
+    starLedManager->updateCompletionState(aocClient->_completionState);
+  }
+}
+
 void setup()
 {
   Serial.begin(115200);
@@ -50,6 +65,7 @@ void setup()
   webServer = new LocalServer(aocClient, starLedManager);
   starLedManager->setup();
   starLedManager->updateProgress(0.10);
+  buttonManager = new ButtonManager(BUTTON_PIN);
 
 // Set IP from arduino_secrets.h otherwise fall back to DHCP
 #ifdef SECRET_ARDUINO_IP_ADDRESS // from "arduino_secrets.h"
@@ -60,6 +76,7 @@ void setup()
   memoryManager->setup();
   aocClient->setup();
   webServer->setup();
+  buttonManager->setup(nullptr, onButtonRelease);
 }
 
 /*****************  MAIN LOOP  ****************************************/
@@ -82,4 +99,5 @@ void loop()
   starLedManager->loop(frameStartTime, prevFrameMs);
   aocClient->loop();
   webServer->loop();
+  buttonManager->loop();
 }

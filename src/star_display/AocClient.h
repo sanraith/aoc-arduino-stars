@@ -36,6 +36,8 @@ public:
     int getLeaderboardPort() { return _leaderboardPort; };
     void setLeaderboardPort(int leaderboardPort);
 
+    uint8_t _completionState[25] = {0};
+
 private:
     void _update();
     void _printTime(time_t t);
@@ -53,7 +55,6 @@ private:
     int _leaderboardPort;
 
     bool _updateRequested = false;
-    uint8_t _completionState[25] = {0};
     unsigned long _lastUpdateEpoch = 0;
 
     WiFiClient *_wifiClient;

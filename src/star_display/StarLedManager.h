@@ -28,6 +28,7 @@ public:
     void loop(unsigned long totalTime, unsigned long frameTime);
     void updateProgress(float percentage);
     void updateCompletionState(const uint8_t newState[NUM_DAYS]);
+    void resetAnimation();
 
 private:
     CRGB _leds[NUM_LEDS];

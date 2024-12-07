@@ -193,3 +193,18 @@ void StarLedManager::handleAnimations(unsigned long totalTime, unsigned long fra
         }
     }
 }
+
+void StarLedManager::resetAnimation()
+{
+    // Clear the queued and continuous animations
+    _queuedAnimations.clear();
+    _continuousAnimations.clear();
+
+    // Reset the LED strip
+    FastLED.clear(true);
+    FastLED.show();
+
+    // Reset the state variables
+    std::fill(std::begin(_knownCompletionState), std::end(_knownCompletionState), 0);
+    std::fill(std::begin(_displayedCompletionState), std::end(_displayedCompletionState), 0);
+}
