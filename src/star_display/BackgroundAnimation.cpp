@@ -71,7 +71,7 @@ StarAnimationState BackgroundAnimation::draw(unsigned long applicationTimeMs, un
         _leds[ledIdx] = color1.fadeToBlackBy(blackness) + color2.fadeToBlackBy(invBlackness);
         if (dayIdx != 24)
         {
-            _leds[ledIdx].fadeToBlackBy(128); // the top star needs more power to get the same relative brightness
+            _leds[ledIdx].fadeToBlackBy(64); // the top star needs more power to get the same relative brightness
         }
         _leds[ledIdx].fadeToBlackBy(initialDarkness); // apply fade-in at the start of the animation
     }

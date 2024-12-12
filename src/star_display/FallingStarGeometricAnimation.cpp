@@ -53,7 +53,8 @@ void highlightLedsAround(Point pos, float maxDistance, CRGB *_leds, CRGB color)
         for (int x = startX; x <= endX; x++)
         {
             auto distance = pos.distance(Point(x, y));
-            uint8_t darkness = easeOutCubic(min(1.0, distance / maxDistance)) * 255;
+            // uint8_t darkness = easeOutCubic(min(1.0, distance / maxDistance)) * 255;
+            uint8_t darkness = min(1.0, distance / maxDistance) * 255;
             uint8_t invDarkness = 255 - darkness;
             uint8_t ledIdx = LED_GRID[y][x];
             CRGB ledColor = color;
@@ -73,20 +74,20 @@ StarAnimationState FallingStarGeometricAnimation::draw(unsigned long application
     float progress = min(1.0, _elapsedMs * 1.0 / animationLengthMs);
     // float posProgress = easeOutCubic(progress);
     float posProgress = progress;
-    // float highlightProgress = 1 - easeInCubic(easeInCubic(progress));
+    //  float highlightProgress = 1 - easeInCubic(easeInCubic(progress));
     float highlightProgress = 1;
 
     float startDistance = (LED_GRID_HEIGHT - DAY_TO_ROW_MAP[day]) * 1.2;
     Point target = _dayToCoordMap[day];
 
     // I heard you liked magic numbers
-    Point direction = Point((target.x - LED_GRID_WIDTH / 2) / LED_GRID_WIDTH * (1.5 + randomDelta * 1.75), 1);
+    Point direction = Point((target.x - LED_GRID_WIDTH / 2 - 1) / LED_GRID_WIDTH * (1.5 + randomDelta * 1.75), 1);
     Point delta = Point(sin(posProgress * 5 + randomDelta * 3) * 2.5, 0);
     // Point delta = Point(sin(posProgress * 5 + randomDelta * 3) * 2.5 * ((LED_GRID_HEIGHT - DAY_TO_ROW_MAP[day] - 1) / LED_GRID_HEIGHT),                        0);
     // Point delta = Point(0, 0);
-    Point pos = target + delta * (easeOutCubic(1 - posProgress)) + direction * -1 * startDistance * (1.0 - posProgress);
+    Point pos = target + delta * (1 - easeOutCubic(progress)) + direction * -1 * startDistance * (1.0 - posProgress);
 
-    float highlightDistance = 1 + 1.5 * highlightProgress;
+    float highlightDistance = 0 + 1.5 * highlightProgress;
 
     highlightLedsAround(pos, highlightDistance, _leds, starColor);
 

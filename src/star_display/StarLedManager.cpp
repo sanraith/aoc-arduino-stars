@@ -7,8 +7,9 @@
 #include <memory>
 #include "BackgroundAnimation.h"
 
-const CRGB COLOR_GOLD = CRGB(255, 255, 0); // CHSV(64, 255, 255);
-const CHSV COLOR_SILVER = CHSV(64, 0, 200);
+CRGB COLOR_GOLD = CRGB(255, 225, 0); // CHSV(64, 255, 255);
+// const CHSV COLOR_SILVER = CHSV(64, 0, 200); // CRGB(225, 225, 225);
+CRGB COLOR_SILVER = CRGB(225, 225, 225); // CRGB(225, 225, 225);
 
 StarLedManager::StarLedManager() : _currentState(STAR_LOADING), _progress(0.0f)
 {
@@ -31,6 +32,10 @@ void StarLedManager::loop(unsigned long totalTime, unsigned long frameTime)
         break;
     case STAR_IDLE:
         FastLED.clear();
+        FastLED.show();
+        break;
+    case STAR_ANIMATING:
+        FastLED.clear();
         for (auto it = _continuousAnimations.begin(); it != _continuousAnimations.end(); it++)
         {
             // Serial.println("starting star bg ");
@@ -38,7 +43,7 @@ void StarLedManager::loop(unsigned long totalTime, unsigned long frameTime)
         }
         handleIdleState();
         handleAnimations(totalTime, frameTime);
-        FastLED.setBrightness(50);
+        FastLED.setBrightness(32);
         FastLED.show();
         break;
     }
@@ -56,7 +61,8 @@ void StarLedManager::updateProgress(float percentage)
     handleLoadingState();
     if (_progress >= 1)
     {
-        _currentState = STAR_IDLE;
+        // _currentState = STAR_IDLE; // TODO for button start
+        _currentState = STAR_ANIMATING;
         delay(250);
     }
 }
@@ -70,7 +76,7 @@ void makeAnimation(
     {
         animationOverlapPct = 0.2;
         animation = std::make_unique<FallingStarZigZagAnimation>(
-            _leds, animationLengthPerStarDistanceMs * (NUM_DAYS - dayIdx), -1 * *delayBetweenAnimations, dayIdx, color);
+            _leds, animationLengthPerStarDistanceMs * (NUM_DAYS - dayIdx) + 500, -1 * *delayBetweenAnimations, dayIdx, color);
     }
     else
     {
@@ -84,6 +90,11 @@ void makeAnimation(
 
 void StarLedManager::updateCompletionState(const uint8_t newState[NUM_DAYS])
 {
+    // if (_currentState != STAR_ANIMATING)
+    // {
+    //     return;
+    // } // TODO for button start
+
     long animationLengthPerStarDistanceMs = 100;
     long delayBetweenAnimations = 0;
     float animationOverlapPct = 0.2;
@@ -101,10 +112,10 @@ void StarLedManager::updateCompletionState(const uint8_t newState[NUM_DAYS])
     for (int row = 0; row < GRID_HEIGHT; row++)
     {
         int daysInRow = DAYS_IN_ROW[row];
-        if (areSilversSeparate)
+        // Queue silver star animations first if requested
+        for (int dayIdx = firstDayOfRow; dayIdx < firstDayOfRow + daysInRow; dayIdx++)
         {
-            // Queue silver star animations first if requested
-            for (int dayIdx = firstDayOfRow; dayIdx < firstDayOfRow + daysInRow; dayIdx++)
+            if (areSilversSeparate)
             {
                 uint8_t starState = newState[dayIdx];
                 if (_knownCompletionState[dayIdx] < starState)
@@ -112,18 +123,9 @@ void StarLedManager::updateCompletionState(const uint8_t newState[NUM_DAYS])
                     // There is a new star where it was not before, animate it.
                     makeAnimation(animationType, _leds, animationLengthPerStarDistanceMs, &delayBetweenAnimations, dayIdx, animationOverlapPct, &_queuedAnimations, COLOR_SILVER);
                 }
-                else
-                {
-                    // There is no star when there was before, just update it's state.
-                    _displayedCompletionState[dayIdx] = starState;
-                }
                 _knownCompletionState[dayIdx] = min(1, starState);
             }
-        }
 
-        // Queue gold star animations regardless
-        for (int dayIdx = firstDayOfRow; dayIdx < firstDayOfRow + daysInRow; dayIdx++)
-        {
             uint8_t starState = newState[dayIdx];
             if (_knownCompletionState[dayIdx] < starState)
             {
@@ -131,6 +133,11 @@ void StarLedManager::updateCompletionState(const uint8_t newState[NUM_DAYS])
                 makeAnimation(animationType, _leds, animationLengthPerStarDistanceMs, &delayBetweenAnimations, dayIdx, animationOverlapPct, &_queuedAnimations, starState == 2 ? COLOR_GOLD : COLOR_SILVER);
             }
             _knownCompletionState[dayIdx] = starState;
+
+            if (_knownCompletionState[dayIdx] < _displayedCompletionState[dayIdx])
+            {
+                _displayedCompletionState[dayIdx] = _knownCompletionState[dayIdx];
+            }
         }
 
         firstDayOfRow += daysInRow;
@@ -199,6 +206,7 @@ void StarLedManager::resetAnimation()
     // Clear the queued and continuous animations
     _queuedAnimations.clear();
     _continuousAnimations.clear();
+    _currentState = STAR_ANIMATING; // TODO for button start
 
     // Reset the LED strip
     FastLED.clear(true);

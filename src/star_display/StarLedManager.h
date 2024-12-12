@@ -17,7 +17,8 @@
 enum StarDisplayState
 {
     STAR_LOADING,
-    STAR_IDLE
+    STAR_IDLE,
+    STAR_ANIMATING
 };
 
 class StarLedManager
